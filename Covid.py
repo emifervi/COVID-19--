@@ -1,7 +1,7 @@
 import sys
 from antlr4 import *
-from CovidLexer import CovidLexer
-from CovidParser import CovidParser
+from antlr.CovidLexer import CovidLexer
+from antlr.CovidParser import CovidParser
  
 def main(argv):
     input_stream = FileStream(argv[1])
