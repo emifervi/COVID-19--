@@ -8,7 +8,7 @@ def main(argv):
     lexer = CovidLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = CovidParser(stream)
-    tree = parser.programa()
+    tree = parser.start()
 
     if parser.getNumberOfSyntaxErrors() == 0:
         print("Successful compilation!")

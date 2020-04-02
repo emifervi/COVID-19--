@@ -1,0 +1,53 @@
+program Ejemplo;
+
+var
+	int i, j, p, maxVariables, maxRenglones;
+	float valor, Arreglo[10], OtroArreglo[10];
+	dataframe DatosCovid;
+	string VarCovid[100];
+	char porqueEmilioDijo;
+
+func int fact(int j);
+var int i;
+{
+	i = j + (p - j*2+j);
+	if (j == 1) {
+		return(j);
+	} else {
+		return(j * fact(j-1) );
+	}
+}
+
+func void inicia(int y, float z);
+var int x;
+{
+	x = 0;
+	while (x < 11) {
+		Arreglo[x] = y * x;
+		x = x+1;
+	}
+}
+
+main();
+{
+	read(p); j = p *2;
+	inicia( p * j - 5) ;
+	for i=0 to 9 
+		{ Arreglo[ i ] = Arreglo[i] * fact(Arreglo[i] - p); }
+
+	load_file(DatosCovid, "C://Documentos/Un Folder/Covid.txt", maxVariables, maxRenglones );
+	load_data(DatosCovid, VarCovid, maxVariables);
+
+	for k=0 to maxVariables {
+		valor = avg(DatosCovid, Data[k] ) ;
+		print ("Media para la Variable" , Data[k], valor) ; 
+	}
+
+	print ("Indice de correlacion entre Varaible 1 y Variable 5 de la muestra", correl(DatosCovid, Data[1], Data[5]));
+
+	while (i >= 0) {
+		print("resultado", Arreglo[i], fact(i +2) * valor) ;
+		i = i - 1;
+	}
+
+}
