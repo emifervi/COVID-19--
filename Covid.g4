@@ -7,11 +7,12 @@ start		: PROGRAM ID SEMI var_block? funcs? main ;
 var_block	: VAR (tipo ids SEMI)+ ;
 ids			: ident (COMMA ident)* ;
 ident		: ID (SQUARE_L expr SQUARE_R)? (SQUARE_L expr SQUARE_R)? ;
-tipo 		: INT | FLOAT | CHAR | STRING | DATAFRAME ;
+tipo 		: tipo_atom | DATAFRAME ;
+tipo_atom	: INT | FLOAT | CHAR | STRING ;
 
 funcs		: (FUNC return_type ID PARENS_L params PARENS_R SEMI var_block? block )+ ;
-return_type : tipo | VOID ;
-params		: tipo ID (COMMA tipo ID)* | /* empty */ ;
+return_type : tipo_atom | VOID ;
+params		: tipo_atom ID (COMMA tipo_atom ID)* | /* empty */ ;
 block		: CURLY_L statement* CURLY_R ;
 
 main 		: MAIN PARENS_L PARENS_R SEMI block ;
