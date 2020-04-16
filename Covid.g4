@@ -2,7 +2,7 @@ grammar Covid;
 
 /* Parser Rules */
 
-start		: PROGRAM ID SEMI var_block? funcs? main ;
+start		: PROGRAM ID SEMI var_block? func* main ;
 
 var_block	: VAR (tipo ids SEMI)+ ;
 ids			: ident (COMMA ident)* ;
@@ -10,12 +10,13 @@ ident		: ID (SQUARE_L expr SQUARE_R)? (SQUARE_L expr SQUARE_R)? ;
 tipo 		: tipo_atom | DATAFRAME ;
 tipo_atom	: INT | FLOAT | CHAR | STRING ;
 
-funcs		: (FUNC return_type ID PARENS_L params PARENS_R SEMI var_block? block )+ ;
+func		: FUNC return_type ID PARENS_L params? PARENS_R SEMI var_block? block ;
 return_type : tipo_atom | VOID ;
-params		: tipo_atom ID (COMMA tipo_atom ID)* | /* empty */ ;
+params		: tipo_atom ID param ;
+param		: COMMA tipo_atom ID param | /* empty */ ;
 block		: CURLY_L statement* CURLY_R ;
 
-main 		: MAIN PARENS_L PARENS_R SEMI block ;
+main 		: MAIN PARENS_L PARENS_R SEMI var_block? block ;
 
 statement	: assignment | call | regresa | read | write | decision | while_loop | for_loop | expr | covid SEMI ;
 

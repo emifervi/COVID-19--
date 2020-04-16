@@ -53,12 +53,21 @@ class CovidListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CovidParser#funcs.
-    def enterFuncs(self, ctx:CovidParser.FuncsContext):
+    # Enter a parse tree produced by CovidParser#tipo_atom.
+    def enterTipo_atom(self, ctx:CovidParser.Tipo_atomContext):
         pass
 
-    # Exit a parse tree produced by CovidParser#funcs.
-    def exitFuncs(self, ctx:CovidParser.FuncsContext):
+    # Exit a parse tree produced by CovidParser#tipo_atom.
+    def exitTipo_atom(self, ctx:CovidParser.Tipo_atomContext):
+        pass
+
+
+    # Enter a parse tree produced by CovidParser#func.
+    def enterFunc(self, ctx:CovidParser.FuncContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#func.
+    def exitFunc(self, ctx:CovidParser.FuncContext):
         pass
 
 
@@ -77,6 +86,15 @@ class CovidListener(ParseTreeListener):
 
     # Exit a parse tree produced by CovidParser#params.
     def exitParams(self, ctx:CovidParser.ParamsContext):
+        pass
+
+
+    # Enter a parse tree produced by CovidParser#param.
+    def enterParam(self, ctx:CovidParser.ParamContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#param.
+    def exitParam(self, ctx:CovidParser.ParamContext):
         pass
 
 

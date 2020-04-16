@@ -1,0 +1,23 @@
+program Tables;
+
+var
+	int a, b;
+    float x;
+
+func void func1(string s);
+var int i;
+{
+
+}
+
+func int func2();
+var int j;
+{
+
+}
+
+main();
+var int n;
+{
+
+}
