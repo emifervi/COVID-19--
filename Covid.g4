@@ -42,7 +42,7 @@ rel_term	: artm_term (LT | GT | LTE | GTE | EQ | NE ) artm_term | artm_term ;
 artm_term	: fact_term ((PLUS | MINUS) fact_term)* ;
 fact_term	: operand ((MULT | DIVIDE) operand)* ;
 
-operand		: PARENS_L expr PARENS_R | (PLUS | MINUS)? cte | ident | ID PARENS_L args PARENS_R | covid  ;
+operand		: NOT? PARENS_L expr PARENS_R | (PLUS | MINUS)? cte | ident | ID PARENS_L args PARENS_R | covid  ;
 
 cte 		: INT_CTE | FLOAT_CTE | CHAR_CTE | STRING_CTE ;
 
@@ -83,6 +83,7 @@ SQUARE_L			: '[' ;
 SQUARE_R			: ']' ;
 EQ					: '==' ;
 NE					: '!=' ;
+NOT					: '!' ;
 LTE					: '<=' ;
 GTE					: '>=' ;
 LT					: '<' ;

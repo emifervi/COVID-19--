@@ -1,9 +1,9 @@
 from antlr4 import *
-from enum import Enum
+from enum import IntEnum
 from antlr.CovidListener import CovidListener
 from antlr.CovidParser import CovidParser
 
-class Type(Enum):
+class Type(IntEnum):
     INT = 0
     FLOAT = 1
     CHAR = 2
