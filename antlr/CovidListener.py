@@ -233,6 +233,15 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#comp_term.
+    def enterComp_term(self, ctx:CovidParser.Comp_termContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#comp_term.
+    def exitComp_term(self, ctx:CovidParser.Comp_termContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#rel_term.
     def enterRel_term(self, ctx:CovidParser.Rel_termContext):
         pass

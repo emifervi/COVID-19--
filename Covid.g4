@@ -18,7 +18,7 @@ block		: CURLY_L statement* CURLY_R ;
 
 main 		: MAIN PARENS_L PARENS_R SEMI var_block? block ;
 
-statement	: assignment | call | regresa | read | write | decision | while_loop | for_loop | expr | covid SEMI ;
+statement	: assignment | call | regresa | read | write | decision | while_loop | for_loop | covid SEMI ;
 
 assignment	: ident ASGN expr SEMI ;
 
@@ -37,8 +37,9 @@ while_loop 	: WHILE PARENS_L expr PARENS_R block ;
 for_loop 	: FOR ID ASGN expr TO expr block ;
 
 expr		: and_term (OR and_term)* ;
-and_term	: rel_term (AND rel_term)* ;
-rel_term	: artm_terms (LT | GT | LTE | GTE | EQ | NE ) artm_terms | artm_terms ;
+and_term	: comp_term (AND comp_term)* ;
+comp_term	: rel_term (EQ | NE) rel_term | rel_term ;
+rel_term	: artm_terms (LT | GT | LTE | GTE ) artm_terms | artm_terms ;
 artm_terms	: fact_terms artm_term ;
 artm_term	: (PLUS | MINUS) fact_terms artm_term | /* empty */ ;
 fact_terms	: operand fact_term ;

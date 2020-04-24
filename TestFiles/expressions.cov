@@ -8,6 +8,8 @@ func void func1(string s);
 var int i;
 {
     x = a + b * i + 12.0;
+    x = x - 2;
+    x = b == i;
 }
 
 func int func2();
@@ -20,4 +22,6 @@ main();
 var int n;
 {
     a = n * x + 22 - x * 12;
+    a = b == b;
+    a = x != n;
 }

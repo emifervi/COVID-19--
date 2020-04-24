@@ -1,8 +1,8 @@
 import sys
-import pprint
 from antlr4 import *
 from antlr.CovidLexer import CovidLexer
 from antlr.CovidParser import CovidParser
+from antlr.CovidListener import CovidListener
 from DirFunc import DirFunc
 from Quadruples import QuadrupleList
 from antlr4.tree.Trees import Trees
@@ -15,7 +15,6 @@ def main(argv):
     stream = CommonTokenStream(lexer)
     parser = CovidParser(stream)
     tree = parser.start()
-
     dir_func = DirFunc()
     walker = ParseTreeWalker()
     walker.walk(dir_func, tree)
@@ -25,6 +24,7 @@ def main(argv):
     walker.walk(quad_list, tree)
 
     if debug:
+        #print(Trees.toStringTree(tree, None, parser))
         #print(dir_func)
         print(quad_list)
 
