@@ -27,6 +27,9 @@ class QuadrupleList(CovidListener):
         self.memory = dir_func.memory
 
     def enterFunc(self, ctx):
+        """
+        Updates runtime scope
+        """
         func_name = ctx.ID().getText()
         self.curr_scope = func_name
 
@@ -34,6 +37,10 @@ class QuadrupleList(CovidListener):
         self.curr_scope = "main"
 
     def addOperandToStack(self, var_id):
+        """
+        Checks if the variable exists and adds the operand to the stack
+        base on the scope
+        """
         local_table = self.func_table[self.curr_scope].var_table
         global_table = self.func_table["global"].var_table
 
@@ -56,6 +63,10 @@ class QuadrupleList(CovidListener):
             self.addOperandToStack(ctx.ID().getText())
 
     def exitCte(self, ctx):
+        """
+        Checks for the existence of constants and adds them
+        to the operand stack as needed
+        """
         if ctx.INT_CTE() != None:
             self.operand_stack.append((self.memory.getAddress("const"), Type.INT))
         elif ctx.FLOAT_CTE() != None:
@@ -65,29 +76,18 @@ class QuadrupleList(CovidListener):
         elif ctx.STRING_CTE() != None:
             self.operand_stack.append((self.memory.getAddress("const"), Type.STRING))
 
-    def enterArtm_term(self, ctx):
-        if ctx.PLUS() != None:
-            self.operator_stack.append(Operator.SUM)
-        elif ctx.MINUS() != None:
-            self.operator_stack.append(Operator.SUB)
-
-    def enterFact_term(self, ctx):
-        if ctx.MULT() != None:
-            self.operator_stack.append(Operator.MULT)
-        elif ctx.DIVIDE() != None:
-            self.operator_stack.append(Operator.DIV)
-
-    def enterComp_term(self, ctx):
-        if ctx.EQ() != None:
-            self.operator_stack.append(Operator.EQ)
-        elif ctx.NE() != None:
-            self.operator_stack.append(Operator.NE)
-
     def parseAsgnQuad(self):
+        """
+        Checks the operator stack the asssignment OP
+        Creates the cuadruple for assignment
+        """
         if len(self.operator_stack) == 0:
             return
 
         if self.operator_stack[-1] == Operator.ASGN:
+            # print(self.operator_stack)
+            # print(self.operand_stack)
+
             r_operand, r_type = self.operand_stack.pop()
             l_operand, l_type = self.operand_stack.pop()
             operator = self.operator_stack.pop()
@@ -98,6 +98,8 @@ class QuadrupleList(CovidListener):
                 quad = Quadruple(operator, l_operand, r_operand)
                 self.createQuadruple(quad)
 
+                # print(quad)
+
                 if self.memory.getAddressType(r_operand) == "temp":
                     self.memory.releaseAddress(r_operand)
 
@@ -106,10 +108,17 @@ class QuadrupleList(CovidListener):
 
 
     def parseFourTupleQuad(self, operands):
+        """
+        Checks the operator stack
+        Creates the cuadruples as needed
+        """
         if len(self.operator_stack) == 0:
             return
 
         if self.operator_stack[-1] in operands:
+            # print(self.operator_stack)
+            # print(self.operand_stack)
+
             r_operand, r_type = self.operand_stack.pop()
             l_operand, l_type = self.operand_stack.pop()
             operator = self.operator_stack.pop()
@@ -122,6 +131,8 @@ class QuadrupleList(CovidListener):
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, result_type))
 
+                # print(quad)
+
                 if self.memory.getAddressType(r_operand) == "temp":
                     self.memory.releaseAddress(r_operand)
 
@@ -131,14 +142,73 @@ class QuadrupleList(CovidListener):
             else:
                 print('Error: Type mismatch')
 
-    def exitFact_terms(self, ctx):
-        self.parseFourTupleQuad([Operator.SUM, Operator.SUB])
+    def enterExprs(self, ctx):
+        if ctx.OR() != None:
+            self.operator_stack.append(Operator.OR)
 
-    def exitOperand(self, ctx):
-        self.parseFourTupleQuad([Operator.MULT, Operator.DIV])
+    def enterAnd_terms(self, ctx):
+        if ctx.AND() != None:
+            self.operator_stack.append(Operator.AND)
+
+    def enterComp_op(self, ctx):
+        if ctx.EQ() != None:
+            self.operator_stack.append(Operator.EQ)
+        elif ctx.NE() != None:
+            self.operator_stack.append(Operator.NE)
+    
+    def enterRel_op(self, ctx):
+        if ctx.GT() != None:
+            self.operator_stack.append(Operator.GT)
+        elif ctx.LT() != None:
+            self.operator_stack.append(Operator.LT)
+        elif ctx.GTE() != None:
+            self.operator_stack.append(Operator.GTE)
+        elif ctx.LTE() != None:
+            self.operator_stack.append(Operator.LTE)
+
+    def enterArtm_terms(self, ctx):
+        if ctx.PLUS() != None:
+            self.operator_stack.append(Operator.SUM)
+        elif ctx.MINUS() != None:
+            self.operator_stack.append(Operator.SUB)
+
+    def enterFact_terms(self, ctx):
+        if ctx.MULT() != None:
+            self.operator_stack.append(Operator.MULT)
+        elif ctx.DIVIDE() != None:
+            self.operator_stack.append(Operator.DIV)
+
+    def enterOperand(self, ctx):
+        # print("Enter operand: " + ctx.getText())
+
+        if ctx.getChild(0).getText() == '(':
+            self.operator_stack.append('$')
+
+        if ctx.getChildCount() > 1:
+            if ctx.getChild(1).getText() == '(' and ctx.getChild(0).geText() == '!':
+                self.operator_stack.append('$')
+
+    def exitAnd_term(self, ctx):
+        self.parseFourTupleQuad([Operator.OR])
 
     def exitComp_term(self, ctx):
+        self.parseFourTupleQuad([Operator.AND])
+
+    def exitRel_term(self, ctx):
         self.parseFourTupleQuad([Operator.NE, Operator.EQ])
+
+    def exitArtm_term(self, ctx):
+        self.parseFourTupleQuad([Operator.LT, Operator.GT, Operator.LTE, Operator.GTE])
+
+    def exitFact_term(self, ctx):
+        self.parseFourTupleQuad([Operator.SUM, Operator.SUB])
+        
+    def exitOperand(self, ctx):
+        if self.operator_stack[-1] == "$" and ctx.getText()[-1] == ")":
+            self.operator_stack.pop()
+        
+        self.parseFourTupleQuad([Operator.MULT, Operator.DIV])
+
     
     def createQuadruple(self, quad):
         self.quad_list.append(quad)
@@ -146,5 +216,4 @@ class QuadrupleList(CovidListener):
 
     def __repr__(self):
         representation = f'Operator Stack:\n{self.operator_stack}\n\nOperand Stack:\n{self.operand_stack}\n\nQuad List:\n{self.quad_list}\n'
-
         return representation

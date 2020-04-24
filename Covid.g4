@@ -36,14 +36,18 @@ decision	: IF PARENS_L expr PARENS_R block (ELSE block)? ;
 while_loop 	: WHILE PARENS_L expr PARENS_R block ;
 for_loop 	: FOR ID ASGN expr TO expr block ;
 
-expr		: and_term (OR and_term)* ;
-and_term	: comp_term (AND comp_term)* ;
-comp_term	: rel_term (EQ | NE) rel_term | rel_term ;
-rel_term	: artm_terms (LT | GT | LTE | GTE ) artm_terms | artm_terms ;
-artm_terms	: fact_terms artm_term ;
-artm_term	: (PLUS | MINUS) fact_terms artm_term | /* empty */ ;
-fact_terms	: operand fact_term ;
-fact_term	: (MULT | DIVIDE) operand fact_term | /* empty */ ;
+expr		: and_term exprs ;
+exprs		: OR and_term exprs | /* empty */ ;
+and_term	: comp_term and_terms ;
+and_terms	: AND comp_term and_terms | /* empty */ ;
+comp_term	: rel_term comp_op rel_term | rel_term ;
+comp_op		: EQ | NE ;
+rel_term	: artm_term rel_op artm_term | artm_term ;
+rel_op		: LT | GT | LTE | GTE ;
+artm_term	: fact_term artm_terms ;
+artm_terms	: (PLUS | MINUS) fact_term artm_terms | /* empty */ ;
+fact_term	: operand fact_terms ;
+fact_terms	: (MULT | DIVIDE) operand fact_terms | /* empty */ ;
 
 operand		: NOT? PARENS_L expr PARENS_R | (PLUS | MINUS)? cte | ident | ID PARENS_L args PARENS_R | covid  ;
 

@@ -224,12 +224,30 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#exprs.
+    def enterExprs(self, ctx:CovidParser.ExprsContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#exprs.
+    def exitExprs(self, ctx:CovidParser.ExprsContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#and_term.
     def enterAnd_term(self, ctx:CovidParser.And_termContext):
         pass
 
     # Exit a parse tree produced by CovidParser#and_term.
     def exitAnd_term(self, ctx:CovidParser.And_termContext):
+        pass
+
+
+    # Enter a parse tree produced by CovidParser#and_terms.
+    def enterAnd_terms(self, ctx:CovidParser.And_termsContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#and_terms.
+    def exitAnd_terms(self, ctx:CovidParser.And_termsContext):
         pass
 
 
@@ -242,6 +260,15 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#comp_op.
+    def enterComp_op(self, ctx:CovidParser.Comp_opContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#comp_op.
+    def exitComp_op(self, ctx:CovidParser.Comp_opContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#rel_term.
     def enterRel_term(self, ctx:CovidParser.Rel_termContext):
         pass
@@ -251,12 +278,12 @@ class CovidListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CovidParser#artm_terms.
-    def enterArtm_terms(self, ctx:CovidParser.Artm_termsContext):
+    # Enter a parse tree produced by CovidParser#rel_op.
+    def enterRel_op(self, ctx:CovidParser.Rel_opContext):
         pass
 
-    # Exit a parse tree produced by CovidParser#artm_terms.
-    def exitArtm_terms(self, ctx:CovidParser.Artm_termsContext):
+    # Exit a parse tree produced by CovidParser#rel_op.
+    def exitRel_op(self, ctx:CovidParser.Rel_opContext):
         pass
 
 
@@ -269,12 +296,12 @@ class CovidListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CovidParser#fact_terms.
-    def enterFact_terms(self, ctx:CovidParser.Fact_termsContext):
+    # Enter a parse tree produced by CovidParser#artm_terms.
+    def enterArtm_terms(self, ctx:CovidParser.Artm_termsContext):
         pass
 
-    # Exit a parse tree produced by CovidParser#fact_terms.
-    def exitFact_terms(self, ctx:CovidParser.Fact_termsContext):
+    # Exit a parse tree produced by CovidParser#artm_terms.
+    def exitArtm_terms(self, ctx:CovidParser.Artm_termsContext):
         pass
 
 
@@ -284,6 +311,15 @@ class CovidListener(ParseTreeListener):
 
     # Exit a parse tree produced by CovidParser#fact_term.
     def exitFact_term(self, ctx:CovidParser.Fact_termContext):
+        pass
+
+
+    # Enter a parse tree produced by CovidParser#fact_terms.
+    def enterFact_terms(self, ctx:CovidParser.Fact_termsContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#fact_terms.
+    def exitFact_terms(self, ctx:CovidParser.Fact_termsContext):
         pass
 
 
