@@ -1,9 +1,14 @@
 import sys
+import pprint
 from antlr4 import *
 from antlr.CovidLexer import CovidLexer
 from antlr.CovidParser import CovidParser
 from DirFunc import DirFunc
+from Quadruples import QuadrupleList
+from antlr4.tree.Trees import Trees
  
+debug = True
+
 def main(argv):
     input_stream = FileStream(argv[1])
     lexer = CovidLexer(input_stream)
@@ -15,7 +20,13 @@ def main(argv):
     walker = ParseTreeWalker()
     walker.walk(dir_func, tree)
 
-    # print(dir_func)
+    quad_list = QuadrupleList(dir_func)
+    walker = ParseTreeWalker()
+    walker.walk(quad_list, tree)
+
+    if debug:
+        #print(dir_func)
+        print(quad_list)
 
     if parser.getNumberOfSyntaxErrors() == 0:
         print("Successful compilation!")

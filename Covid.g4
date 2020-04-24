@@ -38,9 +38,11 @@ for_loop 	: FOR ID ASGN expr TO expr block ;
 
 expr		: and_term (OR and_term)* ;
 and_term	: rel_term (AND rel_term)* ;
-rel_term	: artm_term (LT | GT | LTE | GTE | EQ | NE ) artm_term | artm_term ;
-artm_term	: fact_term ((PLUS | MINUS) fact_term)* ;
-fact_term	: operand ((MULT | DIVIDE) operand)* ;
+rel_term	: artm_terms (LT | GT | LTE | GTE | EQ | NE ) artm_terms | artm_terms ;
+artm_terms	: fact_terms artm_term ;
+artm_term	: (PLUS | MINUS) fact_terms artm_term | /* empty */ ;
+fact_terms	: operand fact_term ;
+fact_term	: (MULT | DIVIDE) operand fact_term | /* empty */ ;
 
 operand		: NOT? PARENS_L expr PARENS_R | (PLUS | MINUS)? cte | ident | ID PARENS_L args PARENS_R | covid  ;
 

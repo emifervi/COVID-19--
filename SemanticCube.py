@@ -17,6 +17,9 @@ class Operator(IntEnum):
     OR = 12
     NOT = 13
 
+    def __repr__(self):
+        return f'{self.name}'
+
 semantic_cube = [[[None for x in range(len(Operator))] for x in range(len(Type))] for x in range(len(Type))]
 
 semantic_cube[Type.INT][Type.INT][Operator.MULT] = Type.INT
