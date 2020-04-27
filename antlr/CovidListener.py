@@ -179,6 +179,15 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#impr.
+    def enterImpr(self, ctx:CovidParser.ImprContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#impr.
+    def exitImpr(self, ctx:CovidParser.ImprContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#imprs.
     def enterImprs(self, ctx:CovidParser.ImprsContext):
         pass

@@ -16,6 +16,9 @@ class Operator(IntEnum):
     AND = 11
     OR = 12
     NOT = 13
+    FF = 14
+    PRINT = 15
+    INPUT = 16
 
     def __repr__(self):
         return f'{self.name}'

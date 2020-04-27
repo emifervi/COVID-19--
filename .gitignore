@@ -1,3 +1,4 @@
 .antlr/
 __pycache__/
 .DS_Store
+testresults.txt

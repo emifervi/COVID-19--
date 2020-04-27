@@ -62,6 +62,12 @@ class QuadrupleList(CovidListener):
         if isinstance(ctx.parentCtx, CovidParser.OperandContext):
             self.addOperandToStack(ctx.ID().getText())
 
+        if isinstance(ctx.parentCtx.parentCtx, CovidParser.ReadContext):
+            self.operator_stack.append(Operator.INPUT)
+            self.addOperandToStack(ctx.ID().getText())
+            self.parseReadQuad()
+
+
     def exitCte(self, ctx):
         """
         Checks for the existence of constants and adds them
@@ -81,7 +87,7 @@ class QuadrupleList(CovidListener):
         Checks the operator stack the asssignment OP
         Creates the cuadruple for assignment
         """
-        if len(self.operator_stack) == 0:
+        if not self.operator_stack:
             return
 
         if self.operator_stack[-1] == Operator.ASGN:
@@ -104,15 +110,59 @@ class QuadrupleList(CovidListener):
                     self.memory.releaseAddress(r_operand)
 
             else:
-                print('Error: Type mismatch')        
+                print('Error: Type mismatch')
 
+    def parseNotQuad(self):
+        if not self.operator_stack:
+            return
+
+        if self.operator_stack[-1] == Operator.NOT:
+            self.operator_stack.pop()
+            operand, data_type = self.operand_stack.pop()
+
+            if data_type == Type.INT:
+                result_addr = self.memory.getAddress('temp')
+                quad = Quadruple(Operator.NOT, result_addr, operand)
+                self.createQuadruple(quad)
+                self.operand_stack.append((result_addr, Type.INT))
+
+                if self.memory.getAddressType(operand) == "temp":
+                    self.memory.releaseAddress(operand)
+
+            else:
+                print('Error: Type mismatch')
+
+    def parsePrintQuad(self):
+        if not self.operator_stack:
+            return
+
+        if self.operator_stack[-1] == Operator.PRINT: 
+            self.operator_stack.pop()
+            operand, _ = self.operand_stack.pop()
+
+            quad = Quadruple(Operator.PRINT, None, operand)
+            self.createQuadruple(quad)
+
+            if self.memory.getAddressType(operand) == "temp":
+                self.memory.releaseAddress(operand)
+
+    def parseReadQuad(self):
+        if not self.operator_stack:
+            return
+
+        if self.operator_stack[-1] == Operator.INPUT: 
+            self.operator_stack.pop()
+            operand, _ = self.operand_stack.pop()
+
+            quad = Quadruple(Operator.INPUT, None, operand)
+            self.createQuadruple(quad)
 
     def parseFourTupleQuad(self, operands):
         """
         Checks the operator stack
         Creates the cuadruples as needed
         """
-        if len(self.operator_stack) == 0:
+        if not self.operator_stack:
             return
 
         if self.operator_stack[-1] in operands:
@@ -181,12 +231,20 @@ class QuadrupleList(CovidListener):
     def enterOperand(self, ctx):
         # print("Enter operand: " + ctx.getText())
 
+        if ctx.NOT():
+            self.operator_stack.append(Operator.NOT)
+
         if ctx.getChild(0).getText() == '(':
-            self.operator_stack.append('$')
+            self.operator_stack.append(Operator.FF)
 
         if ctx.getChildCount() > 1:
-            if ctx.getChild(1).getText() == '(' and ctx.getChild(0).geText() == '!':
-                self.operator_stack.append('$')
+            if ctx.getChild(1).getText() == '(' and ctx.getChild(0).getText() == '!':
+                self.operator_stack.append(Operator.FF)
+
+    def exitExpr(self, ctx):
+        if isinstance(ctx.parentCtx, CovidParser.ImprsContext) or isinstance(ctx.parentCtx, CovidParser.ImprContext):
+            self.operator_stack.append(Operator.PRINT)
+            self.parsePrintQuad()
 
     def exitAnd_term(self, ctx):
         self.parseFourTupleQuad([Operator.OR])
@@ -204,11 +262,19 @@ class QuadrupleList(CovidListener):
         self.parseFourTupleQuad([Operator.SUM, Operator.SUB])
         
     def exitOperand(self, ctx):
-        if self.operator_stack[-1] == "$" and ctx.getText()[-1] == ")":
-            self.operator_stack.pop()
-        
-        self.parseFourTupleQuad([Operator.MULT, Operator.DIV])
+        if not self.operator_stack:
+            return
 
+        if self.operator_stack[-1] == Operator.FF and ctx.getText()[-1] == ")":
+            self.operator_stack.pop()
+
+            if not self.operator_stack:
+                return
+
+            if self.operator_stack[-1] == Operator.NOT:
+                self.parseNotQuad()
+                
+        self.parseFourTupleQuad([Operator.MULT, Operator.DIV])
     
     def createQuadruple(self, quad):
         self.quad_list.append(quad)

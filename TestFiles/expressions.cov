@@ -45,6 +45,12 @@ var int n;
         2010 None 1000
     */
 
-    n = a + (b + 1) + n * 2 == (x != 2) > (1 - 2 * 3);
     n = ( x + (10 * (a - (2 * (x <= (4 == 5))))));
+
+    // Pruebas basicas
+    input(n, a, x);
+    n = (1 > 2) && !(a == b);
+    print(n+x,"Hello there", (a==b));
+    n = a + (b + 1) + n * 2 == (x != 2) > (1 - 2 * 3);
+
 }

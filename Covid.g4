@@ -28,8 +28,9 @@ args		: expr (COMMA expr)* | /* empty */ ;
 regresa 	: RETURN PARENS_L expr PARENS_R SEMI ;
 
 read 		: INPUT PARENS_L ids PARENS_R SEMI ;
-write 		: PRINT PARENS_L imprs PARENS_R SEMI ;
-imprs		: (expr | STRING_CTE) (COMMA (expr | STRING_CTE))* ;
+write 		: PRINT PARENS_L impr PARENS_R SEMI ;
+impr		: expr imprs ;
+imprs		: COMMA expr imprs | /* empty */ ;
 
 decision	: IF PARENS_L expr PARENS_R block (ELSE block)? ;
 
