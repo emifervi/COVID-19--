@@ -233,6 +233,15 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#for_asgn.
+    def enterFor_asgn(self, ctx:CovidParser.For_asgnContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#for_asgn.
+    def exitFor_asgn(self, ctx:CovidParser.For_asgnContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#expr.
     def enterExpr(self, ctx:CovidParser.ExprContext):
         pass

@@ -1,0 +1,23 @@
+program Decisions;
+
+var
+	int a, b;
+
+func void func1();
+var int n;
+{
+    while(n == 1) {
+        print("lessgoooooooo");
+    }
+}
+
+
+main();
+var int i;
+{
+    for i = 0 to 9 {
+        print("lessnotgoooo");
+    }
+
+    a = b;
+}

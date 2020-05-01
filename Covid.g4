@@ -36,7 +36,8 @@ decision	: IF PARENS_L expr PARENS_R block else_block? ;
 else_block	: ELSE block ;
 
 while_loop 	: WHILE PARENS_L expr PARENS_R block ;
-for_loop 	: FOR ID ASGN expr TO expr block ;
+for_loop 	: FOR for_asgn TO expr block ;
+for_asgn	: ID ASGN expr ;
 
 expr		: and_term exprs ;
 exprs		: OR and_term exprs | /* empty */ ;

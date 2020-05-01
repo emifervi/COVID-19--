@@ -11,7 +11,7 @@ class Quadruple:
         self.op1 = op1
         self.op2 = op2
         self.res = res
-    
+
     def __repr__(self):
         return f'({self.oper.name}, {self.op1}, {self.op2}, {self.res})\n'
 
@@ -58,7 +58,7 @@ class QuadrupleList(CovidListener):
 
     def exitAssignment(self, ctx):
         self.parseAsgnQuad()
-    
+
     def exitIdent(self, ctx):
         if isinstance(ctx.parentCtx, CovidParser.OperandContext):
             self.addOperandToStack(ctx.ID().getText())
@@ -67,7 +67,6 @@ class QuadrupleList(CovidListener):
             self.operator_stack.append(Operator.INPUT)
             self.addOperandToStack(ctx.ID().getText())
             self.parseReadQuad()
-
 
     def exitCte(self, ctx):
         """
@@ -92,8 +91,6 @@ class QuadrupleList(CovidListener):
             return
 
         if self.operator_stack[-1] == Operator.ASGN:
-            # print(self.operator_stack)
-            # print(self.operand_stack)
 
             r_operand, r_type = self.operand_stack.pop()
             l_operand, l_type = self.operand_stack.pop()
@@ -104,8 +101,6 @@ class QuadrupleList(CovidListener):
             if result_type != None:
                 quad = Quadruple(operator, l_operand, r_operand)
                 self.createQuadruple(quad)
-
-                # print(quad)
 
                 if self.memory.getAddressType(r_operand) == "temp":
                     self.memory.releaseAddress(r_operand)
@@ -137,7 +132,7 @@ class QuadrupleList(CovidListener):
         if not self.operator_stack:
             return
 
-        if self.operator_stack[-1] == Operator.PRINT: 
+        if self.operator_stack[-1] == Operator.PRINT:
             self.operator_stack.pop()
             operand, _ = self.operand_stack.pop()
 
@@ -151,7 +146,7 @@ class QuadrupleList(CovidListener):
         if not self.operator_stack:
             return
 
-        if self.operator_stack[-1] == Operator.INPUT: 
+        if self.operator_stack[-1] == Operator.INPUT:
             self.operator_stack.pop()
             operand, _ = self.operand_stack.pop()
 
@@ -167,8 +162,6 @@ class QuadrupleList(CovidListener):
             return
 
         if self.operator_stack[-1] in operands:
-            # print(self.operator_stack)
-            # print(self.operand_stack)
 
             r_operand, r_type = self.operand_stack.pop()
             l_operand, l_type = self.operand_stack.pop()
@@ -182,8 +175,6 @@ class QuadrupleList(CovidListener):
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, result_type))
 
-                # print(quad)
-
                 if self.memory.getAddressType(r_operand) == "temp":
                     self.memory.releaseAddress(r_operand)
 
@@ -192,6 +183,15 @@ class QuadrupleList(CovidListener):
 
             else:
                 print('Error: Type mismatch')
+
+    def createGOTOFQuad(self, cond):
+        quad = Quadruple(Operator.GOTOF, None, cond, None)
+        self.createQuadruple(quad)
+        self.jump_stack.append(self.quad_counter - 1)
+
+    def enterExpr(self, ctx):
+        if isinstance(ctx.parentCtx, CovidParser.For_loopContext):
+            self.jump_stack.append(self.quad_counter)
 
     def enterExprs(self, ctx):
         if ctx.OR() != None:
@@ -206,7 +206,7 @@ class QuadrupleList(CovidListener):
             self.operator_stack.append(Operator.EQ)
         elif ctx.NE() != None:
             self.operator_stack.append(Operator.NE)
-    
+
     def enterRel_op(self, ctx):
         if ctx.GT() != None:
             self.operator_stack.append(Operator.GT)
@@ -230,7 +230,6 @@ class QuadrupleList(CovidListener):
             self.operator_stack.append(Operator.DIV)
 
     def enterOperand(self, ctx):
-        # print("Enter operand: " + ctx.getText())
 
         if ctx.NOT():
             self.operator_stack.append(Operator.NOT)
@@ -254,26 +253,66 @@ class QuadrupleList(CovidListener):
         # Append the new goto to the jump stack for future solution
         self.jump_stack.append(self.quad_counter - 1)
 
+    def enterWhile_loop(self, ctx):
+        self.jump_stack.append(self.quad_counter) # push counter to stack to solve goto
+    
+    def enterFor_asgn(self, ctx):
+        self.addOperandToStack(ctx.ID().getText()) # push iterator to stack for increment
+        self.addOperandToStack(ctx.ID().getText()) # push iterator to stack for comparison
+        self.addOperandToStack(ctx.ID().getText()) # push iterator to stack for assignment
+
+    def exitFor_asgn(self, ctx):
+        self.operator_stack.append(Operator.ASGN)
+        self.parseAsgnQuad()
+
+    def exitExpr(self, ctx):
+        # generates quadruple for print operations
+        if isinstance(ctx.parentCtx, CovidParser.ImprsContext) or isinstance(ctx.parentCtx, CovidParser.ImprContext):
+            self.operator_stack.append(Operator.PRINT)
+            self.parsePrintQuad()
+
+        # generates jump on false quadruples for if and while
+        if isinstance(ctx.parentCtx, CovidParser.DecisionContext) or isinstance(ctx.parentCtx, CovidParser.While_loopContext):
+            cond, cond_type = self.operand_stack.pop()
+            if cond_type != Type.INT:
+                print("Error: Expected INT type for conditional expression")
+            else:
+                self.createGOTOFQuad(cond)
+
+        if isinstance(ctx.parentCtx, CovidParser.For_loopContext):
+            self.operator_stack.append(Operator.LT)
+            self.parseFourTupleQuad([Operator.LT])
+            
+            cond, _ = self.operand_stack.pop()
+            self.createGOTOFQuad(cond)
+
     def exitDecision(self, ctx):
         # Solve either goto from else or gotof from false if
         go_to = self.jump_stack.pop()
         self.quad_list[go_to].res = self.quad_counter
 
-    def exitExpr(self, ctx):
-        # generates cuadruple for print operations
-        if isinstance(ctx.parentCtx, CovidParser.ImprsContext) or isinstance(ctx.parentCtx, CovidParser.ImprContext):
-            self.operator_stack.append(Operator.PRINT)
-            self.parsePrintQuad()
-        
-        # generates jump cuadruples for decision operations
-        if isinstance(ctx.parentCtx, CovidParser.DecisionContext):
-            cond, cond_type = self.operand_stack.pop()
-            if cond_type != Type.INT:
-                print("Error: Expected INT type for conditional expression")
-            else:
-                quad = Quadruple(Operator.GOTOF, None, cond, None)
-                self.createQuadruple(quad)
-                self.jump_stack.append(self.quad_counter - 1)
+    def exitWhile_loop(self, ctx):
+        go_to_false = self.jump_stack.pop()
+        loop_go_to = self.jump_stack.pop()
+
+        quad = Quadruple(Operator.GOTO, loop_go_to, None, None)
+        self.createQuadruple(quad)
+
+        self.quad_list[go_to_false].res = self.quad_counter
+
+    def exitFor_loop(self, ctx):
+        # INCR var
+        operand, _ = self.operand_stack.pop()
+        quad = Quadruple(Operator.INCR, None, operand)
+        self.createQuadruple(quad)
+
+        # Create GOTO and solve GOTOF
+        go_to_false = self.jump_stack.pop()
+        loop_go_to = self.jump_stack.pop()
+        quad = Quadruple(Operator.GOTO, loop_go_to, None, None)
+        self.createQuadruple(quad)
+
+        self.quad_list[go_to_false].res = self.quad_counter
 
     def exitAnd_term(self, ctx):
         self.parseFourTupleQuad([Operator.OR])
@@ -289,7 +328,7 @@ class QuadrupleList(CovidListener):
 
     def exitFact_term(self, ctx):
         self.parseFourTupleQuad([Operator.SUM, Operator.SUB])
-        
+
     def exitOperand(self, ctx):
         if not self.operator_stack:
             return
@@ -302,9 +341,9 @@ class QuadrupleList(CovidListener):
 
             if self.operator_stack[-1] == Operator.NOT:
                 self.parseNotQuad()
-                
+
         self.parseFourTupleQuad([Operator.MULT, Operator.DIV])
-    
+
     def createQuadruple(self, quad):
         self.quad_list.append(quad)
         self.quad_counter += 1

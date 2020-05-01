@@ -28,7 +28,7 @@ class Function:
         self.name = name
         self.return_type = return_type
         self.var_table = var_table
-    
+
     def __repr__(self):
         return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n'
 
@@ -59,7 +59,7 @@ class Memory:
     def getAddress(self, context):
         if context not in self.memory:
             context = "local"
-        
+
         pointer = self.memory[context]
         self.memory[context] += 1
         return pointer
@@ -89,7 +89,7 @@ class DirFunc(CovidListener):
     def enterFunc(self, ctx):
         func_name = ctx.ID().getText()
         func_type = Type[ctx.getChild(1).getText().upper()]
-        
+
         self.curr_scope = func_name
         self.memory.resetLocal()
 
@@ -116,6 +116,6 @@ class DirFunc(CovidListener):
     def enterParam(self, ctx):
         if ctx.getChildCount() != 0:
             self.addVariable(ctx, 1)
-    
+
     def __repr__(self):
         return f'{self.func_table}'

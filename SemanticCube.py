@@ -22,6 +22,7 @@ class Operator(IntEnum):
     GOTOF = 17
     GOTOV = 18
     GOTO = 19
+    INCR = 20
 
     def __repr__(self):
         return f'{self.name}'
