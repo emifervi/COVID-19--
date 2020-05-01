@@ -206,6 +206,15 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#else_block.
+    def enterElse_block(self, ctx:CovidParser.Else_blockContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#else_block.
+    def exitElse_block(self, ctx:CovidParser.Else_blockContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#while_loop.
     def enterWhile_loop(self, ctx:CovidParser.While_loopContext):
         pass

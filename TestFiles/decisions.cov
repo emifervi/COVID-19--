@@ -1,0 +1,50 @@
+program Decisions;
+
+var
+	int a, b;
+
+func void func1();
+var int j;
+{
+    if (j == 0){
+        print("se armo");
+
+        if (j > 0){
+            j = 2 * 3;
+
+            if (j < 0){
+                j = 0;
+            }
+            else {
+                j = a + b;
+            }
+            j = j;
+        }
+        j = 0;
+    }
+    j = j + 1;
+}
+
+
+main();
+var int n;
+{
+    n = a + b;
+    if (n > 5) {
+        a = b + 1;
+        if( a > 0) {
+            n = n + 10;
+            if(n == 0) {
+                n = 1000000;
+            }
+        }
+        else {
+            n = n - 10;
+        }
+    } else {
+        a = 0;
+    }
+
+    b = a;
+
+}

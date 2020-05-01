@@ -19,6 +19,7 @@ class QuadrupleList(CovidListener):
     quad_list = []
     operand_stack = []
     operator_stack = []
+    jump_stack = []
     curr_scope = ""
     quad_counter = 0
 
@@ -241,10 +242,38 @@ class QuadrupleList(CovidListener):
             if ctx.getChild(1).getText() == '(' and ctx.getChild(0).getText() == '!':
                 self.operator_stack.append(Operator.FF)
 
+    def enterElse_block(self, ctx):
+        # Generate goto operation for true if
+        quad = Quadruple(Operator.GOTO, None, None, None)
+        self.createQuadruple(quad)
+
+        # Obtain position of jump that needs solving (false if) and complete
+        go_to_false = self.jump_stack.pop()
+        self.quad_list[go_to_false].res = self.quad_counter
+
+        # Append the new goto to the jump stack for future solution
+        self.jump_stack.append(self.quad_counter - 1)
+
+    def exitDecision(self, ctx):
+        # Solve either goto from else or gotof from false if
+        go_to = self.jump_stack.pop()
+        self.quad_list[go_to].res = self.quad_counter
+
     def exitExpr(self, ctx):
+        # generates cuadruple for print operations
         if isinstance(ctx.parentCtx, CovidParser.ImprsContext) or isinstance(ctx.parentCtx, CovidParser.ImprContext):
             self.operator_stack.append(Operator.PRINT)
             self.parsePrintQuad()
+        
+        # generates jump cuadruples for decision operations
+        if isinstance(ctx.parentCtx, CovidParser.DecisionContext):
+            cond, cond_type = self.operand_stack.pop()
+            if cond_type != Type.INT:
+                print("Error: Expected INT type for conditional expression")
+            else:
+                quad = Quadruple(Operator.GOTOF, None, cond, None)
+                self.createQuadruple(quad)
+                self.jump_stack.append(self.quad_counter - 1)
 
     def exitAnd_term(self, ctx):
         self.parseFourTupleQuad([Operator.OR])
@@ -281,5 +310,9 @@ class QuadrupleList(CovidListener):
         self.quad_counter += 1
 
     def __repr__(self):
-        representation = f'Operator Stack:\n{self.operator_stack}\n\nOperand Stack:\n{self.operand_stack}\n\nQuad List:\n{self.quad_list}\n'
+        result_list = ""
+        for index, quad in enumerate(self.quad_list):
+            result_list += f'{index}.\t{quad}'
+
+        representation = f'Operator Stack:\n{self.operator_stack}\n\nOperand Stack:\n{self.operand_stack}\n\nQuad List:\n{result_list}\n'
         return representation

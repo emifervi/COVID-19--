@@ -19,6 +19,9 @@ class Operator(IntEnum):
     FF = 14
     PRINT = 15
     INPUT = 16
+    GOTOF = 17
+    GOTOV = 18
+    GOTO = 19
 
     def __repr__(self):
         return f'{self.name}'

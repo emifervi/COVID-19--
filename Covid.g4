@@ -32,7 +32,8 @@ write 		: PRINT PARENS_L impr PARENS_R SEMI ;
 impr		: expr imprs ;
 imprs		: COMMA expr imprs | /* empty */ ;
 
-decision	: IF PARENS_L expr PARENS_R block (ELSE block)? ;
+decision	: IF PARENS_L expr PARENS_R block else_block? ;
+else_block	: ELSE block ;
 
 while_loop 	: WHILE PARENS_L expr PARENS_R block ;
 for_loop 	: FOR ID ASGN expr TO expr block ;
