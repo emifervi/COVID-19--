@@ -1,0 +1,21 @@
+program Era;
+
+var
+	int a, b;
+
+func void func1();
+var float j;
+{
+    j = a + b * 3;
+}
+
+main();
+var string s;
+{
+    if (s == "asdf"){
+        a = a + 1;
+        b = b + 1;
+    }
+
+    func1();
+}

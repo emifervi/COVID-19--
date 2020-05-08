@@ -14,6 +14,33 @@ class Type(IntEnum):
     def __repr__(self):
         return f'{self.name}'
 
+class MemoryChunk:
+    def __init__(self):
+        self.local = {
+            Type.INT: 0,
+            Type.FLOAT: 0,
+            Type.CHAR: 0,
+            Type.STRING: 0
+        }
+        self.temp = {
+            Type.INT: 0,
+            Type.FLOAT: 0,
+            Type.CHAR: 0,
+            Type.STRING: 0
+        }
+
+    def addLocal(self, data_type):
+        self.local[data_type] += 1
+
+    def addTemp(self, data_type):
+        self.temp[data_type] += 1
+
+    def getSize(self):
+        return sum(self.local.values()) + sum(self.temp.values())
+    
+    def __repr__(self):
+        return f'\tLocal: {self.local} \n\tTemp: {self.temp} \n\tSize: {self.getSize()}'
+
 class Variable:
     def __init__(self, name = "", data_type = None, address = None):
         self.name = name
@@ -28,9 +55,10 @@ class Function:
         self.name = name
         self.return_type = return_type
         self.var_table = var_table
+        self.chunk = MemoryChunk()
 
     def __repr__(self):
-        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n'
+        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n Chunk: \n {self.chunk} \n'
 
 class Memory:
     memory = {
@@ -40,8 +68,9 @@ class Memory:
         "const": 3000
     }
 
-    def resetLocal(self):
+    def resetMemoryAddresses(self):
         self.memory["local"] = 1000
+        self.memory["temp"] = 2000
 
     def getAddressType(self, address):
         if address < 1000:
@@ -78,7 +107,7 @@ class DirFunc(CovidListener):
     def enterMain(self, ctx):
         self.func_table["main"] = Function("main", Type.VOID, {})
         self.curr_scope = "main"
-        self.memory.resetLocal()
+        self.memory.resetMemoryAddresses()
 
     def exitTipo(self, ctx):
         self.curr_type = Type[ctx.getText().upper()]
@@ -91,7 +120,7 @@ class DirFunc(CovidListener):
         func_type = Type[ctx.getChild(1).getText().upper()]
 
         self.curr_scope = func_name
-        self.memory.resetLocal()
+        self.memory.resetMemoryAddresses()
 
         if not func_name in self.func_table:
             self.func_table[func_name] = Function(func_name, func_type, {})
@@ -105,6 +134,7 @@ class DirFunc(CovidListener):
 
         if not var_name in var_table:
             var_table[var_name] = Variable(var_name, self.curr_type, self.memory.getAddress(self.curr_scope))
+            self.func_table[self.curr_scope].chunk.addLocal(self.curr_type)
 
     def exitIdent(self, ctx):
         if isinstance(ctx.parentCtx.parentCtx, CovidParser.Var_blockContext):

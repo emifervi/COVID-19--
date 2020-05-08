@@ -1,6 +1,6 @@
 from antlr4 import *
 from enum import IntEnum
-from DirFunc import DirFunc, Memory, Type
+from DirFunc import DirFunc, Memory, Type, MemoryChunk
 from SemanticCube import semantic_cube, Operator
 from antlr.CovidListener import CovidListener
 from antlr.CovidParser import CovidParser
@@ -31,10 +31,12 @@ class QuadrupleList(CovidListener):
         """
         Updates runtime scope
         """
+        self.memory.resetMemoryAddresses()
         func_name = ctx.ID().getText()
         self.curr_scope = func_name
 
     def enterMain(self, ctx):
+        self.memory.resetMemoryAddresses()
         self.curr_scope = "main"
 
     def addOperandToStack(self, var_id):
@@ -118,6 +120,8 @@ class QuadrupleList(CovidListener):
 
             if data_type == Type.INT:
                 result_addr = self.memory.getAddress('temp')
+                self.func_table[self.curr_scope].chunk.addTemp(Type.INT)
+
                 quad = Quadruple(Operator.NOT, result_addr, operand)
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, Type.INT))
@@ -171,6 +175,7 @@ class QuadrupleList(CovidListener):
 
             if result_type != None:
                 result_addr = self.memory.getAddress('temp')
+                self.func_table[self.curr_scope].chunk.addTemp(result_type)
                 quad = Quadruple(operator, result_addr, l_operand, r_operand)
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, result_type))
@@ -260,6 +265,14 @@ class QuadrupleList(CovidListener):
         self.addOperandToStack(ctx.ID().getText()) # push iterator to stack for increment
         self.addOperandToStack(ctx.ID().getText()) # push iterator to stack for comparison
         self.addOperandToStack(ctx.ID().getText()) # push iterator to stack for assignment
+
+    def enterCall(self, ctx):
+        func_name = ctx.ID().getText() 
+        if func_name in self.func_table:
+            quad = Quadruple(Operator.ERA, None, self.func_table[func_name].chunk.getSize())
+            self.createQuadruple(quad)
+        else:
+            print("Error: Function not defined")
 
     def exitFor_asgn(self, ctx):
         self.operator_stack.append(Operator.ASGN)
