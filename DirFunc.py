@@ -56,9 +56,11 @@ class Function:
         self.return_type = return_type
         self.var_table = var_table
         self.chunk = MemoryChunk()
+        self.first_quad = 0
+        self.param_types = []
 
     def __repr__(self):
-        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n Chunk: \n {self.chunk} \n'
+        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n Chunk: \n {self.chunk} \n Param Types: \n\t {self.param_types}\n'
 
 class Memory:
     memory = {
@@ -125,12 +127,17 @@ class DirFunc(CovidListener):
         if not func_name in self.func_table:
             self.func_table[func_name] = Function(func_name, func_type, {})
 
+            func_address = self.memory.getAddress("global")
+            self.func_table["global"].var_table[func_name] = Variable(func_name, func_type, func_address)
+
     def addVariable(self, ctx, index):
         var_name = ctx.ID().getText()
         var_table = self.func_table[self.curr_scope].var_table
 
+        # Is a parameter
         if index >= 0:
             self.curr_type = Type[ctx.getChild(index).getText().upper()]
+            self.func_table[self.curr_scope].param_types.append(self.curr_type)
 
         if not var_name in var_table:
             var_table[var_name] = Variable(var_name, self.curr_type, self.memory.getAddress(self.curr_scope))

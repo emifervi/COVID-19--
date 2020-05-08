@@ -24,6 +24,11 @@ class Operator(IntEnum):
     GOTO = 19
     INCR = 20
     ERA = 21
+    GOSUB = 22
+    ENDPROC = 23
+    END = 24
+    PARAM = 25
+    RETURN = 26
 
     def __repr__(self):
         return f'{self.name}'

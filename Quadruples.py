@@ -21,24 +21,45 @@ class QuadrupleList(CovidListener):
     operator_stack = []
     jump_stack = []
     curr_scope = ""
+    call_scope = ""
     quad_counter = 0
+    k = 0
 
     def __init__(self, dir_func):
         self.func_table = dir_func.func_table
         self.memory = dir_func.memory
 
-    def enterFunc(self, ctx):
+        self.createQuadruple(Quadruple(Operator.GOTO,None,None,None))
+
+    def changeFuncContext(self, func_name):
         """
         Updates runtime scope
         """
         self.memory.resetMemoryAddresses()
-        func_name = ctx.ID().getText()
         self.curr_scope = func_name
 
-    def enterMain(self, ctx):
-        self.memory.resetMemoryAddresses()
-        self.curr_scope = "main"
+        self.func_table[func_name].first_quad = self.quad_counter
 
+    def enterFunc(self, ctx):
+        self.changeFuncContext(ctx.ID().getText())
+
+    def enterMain(self, ctx):
+        self.changeFuncContext("main")
+        self.quad_list[0].res = self.quad_counter
+
+    def exitFunc(self, ctx):
+        self.createQuadruple(Quadruple(Operator.ENDPROC,None,None,None))
+
+    def exitMain(self, ctx):
+        self.createQuadruple(Quadruple(Operator.END,None,None,None))
+
+    def enterArgs(self, ctx):
+        self.k = 0
+
+    def exitArgs(self, ctx):
+        if len(self.func_table[self.call_scope].param_types) != self.k:
+            print("Error: Number of arguments does not coincide with number of parameters")
+    
     def addOperandToStack(self, var_id):
         """
         Checks if the variable exists and adds the operand to the stack
@@ -196,7 +217,7 @@ class QuadrupleList(CovidListener):
 
     def enterExpr(self, ctx):
         if isinstance(ctx.parentCtx, CovidParser.For_loopContext):
-            self.jump_stack.append(self.quad_counter)
+            self.jump_stack.append(self.quad_counter) 
 
     def enterExprs(self, ctx):
         if ctx.OR() != None:
@@ -235,6 +256,8 @@ class QuadrupleList(CovidListener):
             self.operator_stack.append(Operator.DIV)
 
     def enterOperand(self, ctx):
+        if ctx.ID():
+            self.call_scope = ctx.ID().getText()
 
         if ctx.NOT():
             self.operator_stack.append(Operator.NOT)
@@ -267,12 +290,30 @@ class QuadrupleList(CovidListener):
         self.addOperandToStack(ctx.ID().getText()) # push iterator to stack for assignment
 
     def enterCall(self, ctx):
-        func_name = ctx.ID().getText() 
+        func_name = ctx.ID().getText()
+        self.call_scope = func_name
         if func_name in self.func_table:
             quad = Quadruple(Operator.ERA, None, self.func_table[func_name].chunk.getSize())
             self.createQuadruple(quad)
         else:
             print("Error: Function not defined")
+
+    def exitRegresa(self, ctx):
+        ret, ret_type = self.operand_stack.pop()
+        func_type = self.func_table[self.curr_scope].return_type
+        
+        if semantic_cube[ret_type][func_type][Operator.ASGN]:
+            quad = Quadruple(Operator.RETURN, ret, None)
+            self.createQuadruple(quad)
+        
+        else:
+            print('Return expression type does not match function type')
+    
+    def exitCall(self, ctx):
+        func_name = ctx.ID().getText()
+        address = self.func_table[func_name].first_quad
+        quad = Quadruple(Operator.GOSUB, None, func_name, address)
+        self.createQuadruple(quad)
 
     def exitFor_asgn(self, ctx):
         self.operator_stack.append(Operator.ASGN)
@@ -292,13 +333,27 @@ class QuadrupleList(CovidListener):
             else:
                 self.createGOTOFQuad(cond)
 
+        # generates jump on false for 
         if isinstance(ctx.parentCtx, CovidParser.For_loopContext):
             self.operator_stack.append(Operator.LT)
             self.parseFourTupleQuad([Operator.LT])
             
             cond, _ = self.operand_stack.pop()
             self.createGOTOFQuad(cond)
+        
+        if isinstance(ctx.parentCtx, CovidParser.ArgsContext):
+            arg, arg_type = self.operand_stack.pop()
+            param_type = self.func_table[self.call_scope].param_types[self.k]
 
+            result_type = semantic_cube[arg_type][param_type][Operator.ASGN]
+
+            if result_type != None:
+                quad = Quadruple(Operator.PARAM, f"par{self.k}", arg)
+                self.createQuadruple(quad)
+                self.k += 1
+            else:
+                print("Error: Parameter type mismatch")
+            
     def exitDecision(self, ctx):
         # Solve either goto from else or gotof from false if
         go_to = self.jump_stack.pop()
@@ -356,6 +411,21 @@ class QuadrupleList(CovidListener):
                 self.parseNotQuad()
 
         self.parseFourTupleQuad([Operator.MULT, Operator.DIV])
+
+        # store result from non-void func in temp
+        if ctx.ID():
+            func_name = ctx.ID().getText()
+            func_type = self.func_table[func_name].return_type
+            func_address = self.func_table["global"].var_table[func_name].address
+
+            address = self.func_table[func_name].first_quad
+            quad = Quadruple(Operator.GOSUB, None, func_name, address)
+            self.createQuadruple(quad)
+
+            result_addr = self.memory.getAddress('temp')
+            quad = Quadruple(Operator.ASGN, result_addr, func_address)
+            self.operand_stack.append((result_addr, func_type))
+            self.createQuadruple(quad)
 
     def createQuadruple(self, quad):
         self.quad_list.append(quad)

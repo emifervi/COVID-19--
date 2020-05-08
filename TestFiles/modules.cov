@@ -1,12 +1,14 @@
-program Era;
+program Modules;
 
 var
 	int a, b;
 
-func void func1(float num, char kks);
+func float func1(float num, char kks);
 var float j;
 {
     j = a + b * 3;
+
+    return(j+1);
 }
 
 func void func2(int z, string s, float f);
@@ -20,13 +22,13 @@ var int x, y;
 }
 
 main();
-var string s;
+var string s; float pancake;
 {
     if (s == "asdf"){
         a = a + 1;
         b = b + 1;
     }
 
-    func1(1, 'a');
+    pancake = func1(1, 'a');
     func2(1, "str", 2.0);
 }
