@@ -1,45 +1,8 @@
 from antlr4 import *
-from enum import IntEnum
 from antlr.CovidListener import CovidListener
 from antlr.CovidParser import CovidParser
-
-class Type(IntEnum):
-    INT = 0
-    FLOAT = 1
-    CHAR = 2
-    STRING = 3
-    DATAFRAME = 4
-    VOID = 5
-
-    def __repr__(self):
-        return f'{self.name}'
-
-class MemoryChunk:
-    def __init__(self):
-        self.local = {
-            Type.INT: 0,
-            Type.FLOAT: 0,
-            Type.CHAR: 0,
-            Type.STRING: 0
-        }
-        self.temp = {
-            Type.INT: 0,
-            Type.FLOAT: 0,
-            Type.CHAR: 0,
-            Type.STRING: 0
-        }
-
-    def addLocal(self, data_type):
-        self.local[data_type] += 1
-
-    def addTemp(self, data_type):
-        self.temp[data_type] += 1
-
-    def getSize(self):
-        return sum(self.local.values()) + sum(self.temp.values())
-    
-    def __repr__(self):
-        return f'\tLocal: {self.local} \n\tTemp: {self.temp} \n\tSize: {self.getSize()}'
+from Utilities import Type
+from Memory import *
 
 class Variable:
     def __init__(self, name = "", data_type = None, address = None):
@@ -55,52 +18,22 @@ class Function:
         self.name = name
         self.return_type = return_type
         self.var_table = var_table
-        self.chunk = MemoryChunk()
+        self.address_dir = FuncAddressDir()
         self.first_quad = 0
         self.param_types = []
 
     def __repr__(self):
-        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n Chunk: \n {self.chunk} \n Param Types: \n\t {self.param_types}\n'
-
-class Memory:
-    memory = {
-        "global": 0,
-        "local": 1000,
-        "temp": 2000,
-        "const": 3000
-    }
-
-    def resetMemoryAddresses(self):
-        self.memory["local"] = 1000
-        self.memory["temp"] = 2000
-
-    def getAddressType(self, address):
-        if address < 1000:
-            return "global"
-        elif address < 2000:
-            return "local"
-        elif address < 3000:
-            return "temp"
-        else:
-            return "const"
-
-    def releaseAddress(self, address):
-        return
-
-    def getAddress(self, context):
-        if context not in self.memory:
-            context = "local"
-
-        pointer = self.memory[context]
-        self.memory[context] += 1
-        return pointer
-
+        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n Chunk: \n {self.address_dir} \n Param Types: \n\t {self.param_types}\n'
 
 class DirFunc(CovidListener):
     func_table = {}
     curr_scope = ""
     curr_type = None
-    memory = Memory()
+
+    constants = []
+
+    global_address_dir = GlobalAddressDir()
+    cte_address_dir = CteMemory()
 
     def enterStart(self, ctx):
         self.func_table["global"] = Function("global", Type.VOID, {})
@@ -109,7 +42,6 @@ class DirFunc(CovidListener):
     def enterMain(self, ctx):
         self.func_table["main"] = Function("main", Type.VOID, {})
         self.curr_scope = "main"
-        self.memory.resetMemoryAddresses()
 
     def exitTipo(self, ctx):
         self.curr_type = Type[ctx.getText().upper()]
@@ -122,13 +54,13 @@ class DirFunc(CovidListener):
         func_type = Type[ctx.getChild(1).getText().upper()]
 
         self.curr_scope = func_name
-        self.memory.resetMemoryAddresses()
 
         if not func_name in self.func_table:
             self.func_table[func_name] = Function(func_name, func_type, {})
 
-            func_address = self.memory.getAddress("global")
-            self.func_table["global"].var_table[func_name] = Variable(func_name, func_type, func_address)
+            if func_type != Type.VOID:
+                func_address = self.global_address_dir.getAddress(func_type)
+                self.func_table["global"].var_table[func_name] = Variable(func_name, func_type, func_address)
 
     def addVariable(self, ctx, index):
         var_name = ctx.ID().getText()
@@ -140,8 +72,12 @@ class DirFunc(CovidListener):
             self.func_table[self.curr_scope].param_types.append(self.curr_type)
 
         if not var_name in var_table:
-            var_table[var_name] = Variable(var_name, self.curr_type, self.memory.getAddress(self.curr_scope))
-            self.func_table[self.curr_scope].chunk.addLocal(self.curr_type)
+            if self.curr_scope == "global":
+                address = self.global_address_dir.getAddress(self.curr_type)
+            else:
+                address = self.func_table[self.curr_scope].address_dir.addLocal(self.curr_type)
+            
+            var_table[var_name] = Variable(var_name, self.curr_type, address)
 
     def exitIdent(self, ctx):
         if isinstance(ctx.parentCtx.parentCtx, CovidParser.Var_blockContext):
@@ -153,6 +89,25 @@ class DirFunc(CovidListener):
     def enterParam(self, ctx):
         if ctx.getChildCount() != 0:
             self.addVariable(ctx, 1)
+
+    def exitCte(self, ctx):
+        ctx_text = ctx.getText()
+
+        if ctx_text in self.constants:
+            return
+
+        if ctx.INT_CTE() != None:
+            self.cte_address_dir.addConstant(Type.INT, int(ctx_text))
+            self.constants.append(ctx_text)
+        elif ctx.FLOAT_CTE() != None:
+            self.cte_address_dir.addConstant(Type.FLOAT, float(ctx_text))
+            self.constants.append(ctx_text)
+        elif ctx.CHAR_CTE() != None:
+            self.cte_address_dir.addConstant(Type.CHAR, ctx_text)
+            self.constants.append(ctx_text)
+        elif ctx.STRING_CTE() != None:
+            self.cte_address_dir.addConstant(Type.STRING, ctx_text)
+            self.constants.append(ctx_text)
 
     def __repr__(self):
         return f'{self.func_table}'

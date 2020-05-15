@@ -1,7 +1,9 @@
 from antlr4 import *
 from enum import IntEnum
-from DirFunc import DirFunc, Memory, Type, MemoryChunk
-from SemanticCube import semantic_cube, Operator
+from DirFunc import DirFunc
+from Memory import *
+from Utilities import Type, Operator
+from SemanticCube import semantic_cube
 from antlr.CovidListener import CovidListener
 from antlr.CovidParser import CovidParser
 
@@ -27,7 +29,11 @@ class QuadrupleList(CovidListener):
 
     def __init__(self, dir_func):
         self.func_table = dir_func.func_table
-        self.memory = dir_func.memory
+
+        self.global_address_dir = dir_func.global_address_dir
+        self.cte_address_dir = dir_func.cte_address_dir
+
+        self.cte_memory = Memory(self.cte_address_dir)
 
         self.createQuadruple(Quadruple(Operator.GOTO,None,None,None))
 
@@ -35,7 +41,6 @@ class QuadrupleList(CovidListener):
         """
         Updates runtime scope
         """
-        self.memory.resetMemoryAddresses()
         self.curr_scope = func_name
 
         self.func_table[func_name].first_quad = self.quad_counter
@@ -97,13 +102,17 @@ class QuadrupleList(CovidListener):
         to the operand stack as needed
         """
         if ctx.INT_CTE() != None:
-            self.operand_stack.append((self.memory.getAddress("const"), Type.INT))
+            address = self.cte_address_dir.address_table[ctx.getText()]
+            self.operand_stack.append((address, Type.INT))
         elif ctx.FLOAT_CTE() != None:
-            self.operand_stack.append((self.memory.getAddress("const"), Type.FLOAT))
+            address = self.cte_address_dir.address_table[ctx.getText()]
+            self.operand_stack.append((address, Type.FLOAT))
         elif ctx.CHAR_CTE() != None:
-            self.operand_stack.append((self.memory.getAddress("const"), Type.CHAR))
+            address = self.cte_address_dir.address_table[ctx.getText()]
+            self.operand_stack.append((address, Type.CHAR))
         elif ctx.STRING_CTE() != None:
-            self.operand_stack.append((self.memory.getAddress("const"), Type.STRING))
+            address = self.cte_address_dir.address_table[ctx.getText()]
+            self.operand_stack.append((address, Type.STRING))
 
     def parseAsgnQuad(self):
         """
@@ -125,8 +134,8 @@ class QuadrupleList(CovidListener):
                 quad = Quadruple(operator, l_operand, r_operand)
                 self.createQuadruple(quad)
 
-                if self.memory.getAddressType(r_operand) == "temp":
-                    self.memory.releaseAddress(r_operand)
+                if (r_operand / 1000) == 2:
+                    self.func_table[self.curr_scope].address_dir.temp.releaseAddress(r_type, r_operand)
 
             else:
                 print('Error: Type mismatch')
@@ -140,15 +149,14 @@ class QuadrupleList(CovidListener):
             operand, data_type = self.operand_stack.pop()
 
             if data_type == Type.INT:
-                result_addr = self.memory.getAddress('temp')
-                self.func_table[self.curr_scope].chunk.addTemp(Type.INT)
+                result_addr = self.func_table[self.curr_scope].address_dir.addTemp(result_type)
 
                 quad = Quadruple(Operator.NOT, result_addr, operand)
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, Type.INT))
 
-                if self.memory.getAddressType(operand) == "temp":
-                    self.memory.releaseAddress(operand)
+                if (operand / 1000) == 2:
+                    self.func_table[self.curr_scope].address_dir.temp.releaseAddress(data_type, operand)
 
             else:
                 print('Error: Type mismatch')
@@ -159,13 +167,13 @@ class QuadrupleList(CovidListener):
 
         if self.operator_stack[-1] == Operator.PRINT:
             self.operator_stack.pop()
-            operand, _ = self.operand_stack.pop()
+            operand, data_type = self.operand_stack.pop()
 
             quad = Quadruple(Operator.PRINT, None, operand)
             self.createQuadruple(quad)
 
-            if self.memory.getAddressType(operand) == "temp":
-                self.memory.releaseAddress(operand)
+            if (operand / 1000) == 2:
+                self.func_table[self.curr_scope].address_dir.temp.releaseAddress(data_type, operand)
 
     def parseReadQuad(self):
         if not self.operator_stack:
@@ -195,17 +203,17 @@ class QuadrupleList(CovidListener):
             result_type = semantic_cube[l_type][r_type][operator]
 
             if result_type != None:
-                result_addr = self.memory.getAddress('temp')
-                self.func_table[self.curr_scope].chunk.addTemp(result_type)
+                result_addr = self.func_table[self.curr_scope].address_dir.addTemp(result_type)
+                print(result_addr)
                 quad = Quadruple(operator, result_addr, l_operand, r_operand)
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, result_type))
 
-                if self.memory.getAddressType(r_operand) == "temp":
-                    self.memory.releaseAddress(r_operand)
+                if (r_operand / 1000) == 2:
+                    self.func_table[self.curr_scope].address_dir.temp.releaseAddress(r_type, r_operand)
 
-                if self.memory.getAddressType(l_operand) == "temp":
-                    self.memory.releaseAddress(l_operand)
+                if (l_operand / 1000) == 2:
+                    self.func_table[self.curr_scope].address_dir.temp.releaseAddress(l_type, l_operand)
 
             else:
                 print('Error: Type mismatch')
@@ -257,7 +265,7 @@ class QuadrupleList(CovidListener):
 
     def enterOperand(self, ctx):
         if ctx.ID():
-            self.call_scope = ctx.ID().getText()
+            self.enterCall(ctx)
 
         if ctx.NOT():
             self.operator_stack.append(Operator.NOT)
@@ -293,7 +301,7 @@ class QuadrupleList(CovidListener):
         func_name = ctx.ID().getText()
         self.call_scope = func_name
         if func_name in self.func_table:
-            quad = Quadruple(Operator.ERA, None, self.func_table[func_name].chunk.getSize())
+            quad = Quadruple(Operator.ERA, None, self.func_table[func_name].address_dir.getSize())
             self.createQuadruple(quad)
         else:
             print("Error: Function not defined")
@@ -416,16 +424,17 @@ class QuadrupleList(CovidListener):
         if ctx.ID():
             func_name = ctx.ID().getText()
             func_type = self.func_table[func_name].return_type
-            func_address = self.func_table["global"].var_table[func_name].address
+            if func_type != Type.VOID:
+                func_address = self.func_table["global"].var_table[func_name].address
 
-            address = self.func_table[func_name].first_quad
-            quad = Quadruple(Operator.GOSUB, None, func_name, address)
-            self.createQuadruple(quad)
+                address = self.func_table[func_name].first_quad
+                quad = Quadruple(Operator.GOSUB, None, func_name, address)
+                self.createQuadruple(quad)
 
-            result_addr = self.memory.getAddress('temp')
-            quad = Quadruple(Operator.ASGN, result_addr, func_address)
-            self.operand_stack.append((result_addr, func_type))
-            self.createQuadruple(quad)
+                result_addr = self.func_table[self.curr_scope].address_dir.addTemp(func_type)
+                quad = Quadruple(Operator.ASGN, result_addr, func_address)
+                self.operand_stack.append((result_addr, func_type))
+                self.createQuadruple(quad)
 
     def createQuadruple(self, quad):
         self.quad_list.append(quad)
