@@ -2,7 +2,7 @@ from antlr4 import *
 from enum import IntEnum
 from DirFunc import DirFunc
 from Memory import *
-from Utilities import Type, Operator
+from Utilities import Type, Operator, cleanString
 from SemanticCube import semantic_cube
 from antlr.CovidListener import CovidListener
 from antlr.CovidParser import CovidParser
@@ -29,11 +29,7 @@ class QuadrupleList(CovidListener):
 
     def __init__(self, dir_func):
         self.func_table = dir_func.func_table
-
-        self.global_address_dir = dir_func.global_address_dir
         self.cte_address_dir = dir_func.cte_address_dir
-
-        self.cte_memory = Memory(self.cte_address_dir)
 
         self.createQuadruple(Quadruple(Operator.GOTO,None,None,None))
 
@@ -108,10 +104,10 @@ class QuadrupleList(CovidListener):
             address = self.cte_address_dir.address_table[ctx.getText()]
             self.operand_stack.append((address, Type.FLOAT))
         elif ctx.CHAR_CTE() != None:
-            address = self.cte_address_dir.address_table[ctx.getText()]
+            address = self.cte_address_dir.address_table[cleanString(ctx.getText())]
             self.operand_stack.append((address, Type.CHAR))
         elif ctx.STRING_CTE() != None:
-            address = self.cte_address_dir.address_table[ctx.getText()]
+            address = self.cte_address_dir.address_table[cleanString(ctx.getText())]
             self.operand_stack.append((address, Type.STRING))
 
     def parseAsgnQuad(self):
@@ -149,7 +145,7 @@ class QuadrupleList(CovidListener):
             operand, data_type = self.operand_stack.pop()
 
             if data_type == Type.INT:
-                result_addr = self.func_table[self.curr_scope].address_dir.addTemp(result_type)
+                result_addr = self.func_table[self.curr_scope].address_dir.addTemp(data_type)
 
                 quad = Quadruple(Operator.NOT, result_addr, operand)
                 self.createQuadruple(quad)
@@ -204,7 +200,6 @@ class QuadrupleList(CovidListener):
 
             if result_type != None:
                 result_addr = self.func_table[self.curr_scope].address_dir.addTemp(result_type)
-                print(result_addr)
                 quad = Quadruple(operator, result_addr, l_operand, r_operand)
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, result_type))
@@ -406,6 +401,12 @@ class QuadrupleList(CovidListener):
         self.parseFourTupleQuad([Operator.SUM, Operator.SUB])
 
     def exitOperand(self, ctx):
+        if not self.operator_stack:
+            return
+
+        if self.operator_stack[-1] == Operator.NOT:
+            self.parseNotQuad()
+
         if not self.operator_stack:
             return
 

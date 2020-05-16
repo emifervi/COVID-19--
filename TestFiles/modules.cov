@@ -6,16 +6,16 @@ var
 func float func1(float num, char kks);
 var float j;
 {
-    j = a + b * 3;
+    j = a + !b * 3;
 
-    return(j+1);
+    return(!(j+1));
 }
 
 func void func2(int z, string s, float f);
 var int x, y;
 {
     while (x == y){
-        x = 1 + 2 + 3 + 4;
+        x = 1 + 2 + !3 + 4;
         print(y);
         func2(1, "str", 2.0);
     }
@@ -29,6 +29,6 @@ var string s; float pancake;
         b = b + 1;
     }
 
-    pancake = func1(1, 'a');
+    pancake = !func1(1, 'a');
     func2(1, "str", 2.0);
 }

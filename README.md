@@ -7,3 +7,6 @@ Lenguaje imperativo diseñado para la clase de compiladores.
 
 ## Run parser:
 ``$ python3 Covid.py filename.cov``
+
+## Flags:
+ - ```-d on third position enables debug information```

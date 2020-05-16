@@ -16,7 +16,6 @@ semantic_cube[Type.INT][Type.INT][Operator.EQ] = Type.INT
 semantic_cube[Type.INT][Type.INT][Operator.AND] = Type.INT
 semantic_cube[Type.INT][Type.INT][Operator.OR] = Type.INT
 semantic_cube[Type.INT][Type.INT][Operator.NOT] = Type.INT
-semantic_cube[Type.INT][Type.INT][Operator.NOT] = Type.INT
 semantic_cube[Type.INT][Type.INT][Operator.ASGN] = Type.INT
 
 semantic_cube[Type.INT][Type.FLOAT][Operator.MULT] = Type.FLOAT

@@ -52,7 +52,7 @@ artm_terms	: (PLUS | MINUS) fact_term artm_terms | /* empty */ ;
 fact_term	: operand fact_terms ;
 fact_terms	: (MULT | DIVIDE) operand fact_terms | /* empty */ ;
 
-operand		: NOT? PARENS_L expr PARENS_R | (PLUS | MINUS)? cte | ident | ID PARENS_L args PARENS_R | covid  ;
+operand		: NOT? PARENS_L expr PARENS_R | NOT? (PLUS | MINUS)? cte | NOT? ident | NOT? ID PARENS_L args PARENS_R | covid  ;
 
 cte 		: INT_CTE | FLOAT_CTE | CHAR_CTE | STRING_CTE ;
 

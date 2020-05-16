@@ -42,3 +42,6 @@ class Operator(IntEnum):
 
     def __repr__(self):
         return f'{self.name}'
+
+def cleanString(operand):
+    return operand[1:-1]
