@@ -1,0 +1,14 @@
+program Vmlineal;
+
+var
+	int a, b;
+
+main();
+var int n;
+{
+    // a = 1;
+    // b = 2;
+    // n = a + b;
+
+    print("Hello\nWorld\t", "!");
+}

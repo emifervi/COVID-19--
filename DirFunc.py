@@ -1,7 +1,7 @@
 from antlr4 import *
 from antlr.CovidListener import CovidListener
 from antlr.CovidParser import CovidParser
-from Utilities import Type
+from Utilities import Type, cleanString
 from Memory import *
 
 class Variable:
@@ -97,16 +97,16 @@ class DirFunc(CovidListener):
             return
 
         if ctx.INT_CTE() != None:
-            self.cte_address_dir.addConstant(Type.INT, int(ctx_text))
+            self.cte_address_dir.addConstant(Type.INT, ctx_text)
             self.constants.append(ctx_text)
         elif ctx.FLOAT_CTE() != None:
-            self.cte_address_dir.addConstant(Type.FLOAT, float(ctx_text))
+            self.cte_address_dir.addConstant(Type.FLOAT, ctx_text)
             self.constants.append(ctx_text)
         elif ctx.CHAR_CTE() != None:
-            self.cte_address_dir.addConstant(Type.CHAR, ctx_text)
+            self.cte_address_dir.addConstant(Type.CHAR, cleanString(ctx_text))
             self.constants.append(ctx_text)
         elif ctx.STRING_CTE() != None:
-            self.cte_address_dir.addConstant(Type.STRING, ctx_text)
+            self.cte_address_dir.addConstant(Type.STRING, cleanString(ctx_text))
             self.constants.append(ctx_text)
 
     def __repr__(self):

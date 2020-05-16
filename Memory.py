@@ -123,7 +123,19 @@ class CteMemory():
     def addConstant(self, data_type, value):
         address = self.getAddress(data_type, value)
         if address:
-            self.address_table[str(value)] = address
+            self.address_table[value] = address
+
+    def getConstant(self, address):
+        reduced_addr = (address - 3000) 
+
+        if reduced_addr < 100:
+            return self.addresses[Type.INT][reduced_addr]
+        elif reduced_addr < 200:
+            return self.addresses[Type.FLOAT][reduced_addr - 100]
+        elif reduced_addr < 300:
+            return self.addresses[Type.CHAR][reduced_addr - 200]
+        else:
+            return self.addresses[Type.STRING][reduced_addr - 300]
 
 class Memory:
     def __init__(self, directory):
