@@ -129,9 +129,9 @@ class CteMemory():
         reduced_addr = (address - 3000) 
 
         if reduced_addr < 100:
-            return self.addresses[Type.INT][reduced_addr]
+            return int(self.addresses[Type.INT][reduced_addr])
         elif reduced_addr < 200:
-            return self.addresses[Type.FLOAT][reduced_addr - 100]
+            return float(self.addresses[Type.FLOAT][reduced_addr - 100])
         elif reduced_addr < 300:
             return self.addresses[Type.CHAR][reduced_addr - 200]
         else:
@@ -140,18 +140,31 @@ class CteMemory():
 class Memory:
     def __init__(self, directory):
         self.int_pointer = 0
-        self.float_pointer = self.int_pointer + len(directory.addresses[Type.INT])
-        self.char_pointer = self.float_pointer + len(directory.addresses[Type.FLOAT])
-        self.string_pointer = self.char_pointer + len(directory.addresses[Type.CHAR])
+        self.float_pointer = self.int_pointer + directory.addresses[Type.INT]
+        self.char_pointer = self.float_pointer + directory.addresses[Type.FLOAT]
+        self.string_pointer = self.char_pointer + directory.addresses[Type.CHAR]
 
-        self.size = self.string_pointer + len(directory.addresses[Type.STRING])
-
+        self.size = self.string_pointer + directory.addresses[Type.STRING]
         self.space = [None for x in range(self.size)]
+
+    def getValue(self, address):
+        data_type_val = (address % 1000) // 100
+        pointer_val = address % 100
+
+        if data_type_val == 0:
+            return int(self.space[self.int_pointer + pointer_val])
+        elif data_type_val == 1:
+            return float(self.space[self.float_pointer + pointer_val])
+        elif data_type_val == 2:
+            return self.space[self.char_pointer + pointer_val]
+        elif data_type_val == 3:
+            return self.space[self.string_pointer + pointer_val]
+        
 
     def writeAddress(self, address, value):
         data_type_val = (address % 1000) // 100
-        pointer_val = data_type_val % 100
-
+        pointer_val = address % 100
+        
         if data_type_val == 0:
             self.space[self.int_pointer + pointer_val] = value
         elif data_type_val == 1:

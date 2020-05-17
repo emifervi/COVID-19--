@@ -8,7 +8,7 @@ from Quadruples import QuadrupleList
 from VirtualMachine import VirtualMachine
 from antlr4.tree.Trees import Trees
 
-debug = True
+debug = False
 
 def main(argv):
     input_stream = FileStream(argv[1])
@@ -33,10 +33,8 @@ def main(argv):
     )
 
     if debug:
-        #print(Trees.toStringTree(tree, None, parser))
-        #print(dir_func)
-        #print(quad_list)
-        pass
+        print(quad_list)
+        
 
     if parser.getNumberOfSyntaxErrors() == 0:
         print("Successful compilation!")
