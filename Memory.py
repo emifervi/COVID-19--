@@ -1,3 +1,4 @@
+import sys
 from Utilities import Type
 
 class AddressDir:
@@ -19,7 +20,7 @@ class AddressDir:
         # Check if stack has been exceeded
         if pointer_val > 100:
             print("Error: Memory stack exceeded for type and context")
-            return
+            sys.exit()
 
         context_val = self.context * 1000
 
@@ -33,6 +34,9 @@ class AddressDir:
             data_type_val = 300
 
         return context_val + data_type_val + pointer_val
+
+    def getSize(self):
+        return sum(self.addresses.values())
 
 class GlobalAddressDir(AddressDir):
     def __init__(self):
@@ -74,10 +78,6 @@ class FuncAddressDir:
     def getTempSize(self):
         return sum(self.temp.addresses.values())
     
-    #TODO: Modify ERA to use two operands, local and temp size
-    def getSize(self):
-        return self.getLocalSize() + self.getTempSize()
-    
     def addLocal(self, data_type):
         return self.local.getAddress(data_type)
 
@@ -105,7 +105,7 @@ class CteMemory():
         # Check if stack has been exceeded
         if pointer_val > 100:
             print("Error: Memory stack exceeded for type and context")
-            return
+            sys.exit()
 
         context_val = self.context * 1000
 
@@ -147,20 +147,25 @@ class Memory:
         self.size = self.string_pointer + directory.addresses[Type.STRING]
         self.space = [None for x in range(self.size)]
 
+
     def getValue(self, address):
         data_type_val = (address % 1000) // 100
         pointer_val = address % 100
 
-        if data_type_val == 0:
-            return int(self.space[self.int_pointer + pointer_val])
-        elif data_type_val == 1:
-            return float(self.space[self.float_pointer + pointer_val])
-        elif data_type_val == 2:
-            return self.space[self.char_pointer + pointer_val]
-        elif data_type_val == 3:
-            return self.space[self.string_pointer + pointer_val]
+        try:
+            # bloque a intentar
+            if data_type_val == 0:
+                return int(self.space[self.int_pointer + pointer_val])
+            elif data_type_val == 1:
+                return float(self.space[self.float_pointer + pointer_val])
+            elif data_type_val == 2:
+                return self.space[self.char_pointer + pointer_val]
+            elif data_type_val == 3:
+                return self.space[self.string_pointer + pointer_val]
+        except:
+            print("Error: uninitialized variable")
+            sys.exit()
         
-
     def writeAddress(self, address, value):
         data_type_val = (address % 1000) // 100
         pointer_val = address % 100

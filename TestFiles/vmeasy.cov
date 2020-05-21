@@ -1,0 +1,46 @@
+program Vmeasy;
+
+var
+	int A, i;
+
+func int fib(int n);
+{
+    return (n);
+}
+
+func int fib_recurse(int n);
+{
+    return (n);
+}
+
+main();
+{
+    input(i);
+    A = fib(i - 1) + fib_recurse(i - 2);
+    print(A, "\n");
+}
+
+/*
+
+0.      (GOTO, None, None, 5)
+1.      (RETURN, None, None, 1000)
+2.      (ENDPROC, None, None, None)
+3.      (RETURN, None, None, 1000)
+4.      (ENDPROC, None, None, None)
+5.      (INPUT, 1, None, None)
+6.      (ERA, fib, None, None)
+7.      (SUB, 1, 3000, 2000)
+8.      (PARAM, 2000, None, par0)
+9.      (GOSUB, fib, 1, None)
+10.     (ASGN, 2, None, 2001)
+11.     (ERA, fib_recurse, None, None)
+12.     (SUB, 1, 3001, 2002)
+13.     (PARAM, 2002, None, par0)
+14.     (GOSUB, fib_recurse, 3, None)
+15.     (ASGN, 3, None, 2003)
+16.     (SUM, 2001, 2003, 2004)
+17.     (ASGN, 2004, None, 0)
+18.     (PRINT, 0, None, None)
+19.     (END, None, None, None)
+
+*/

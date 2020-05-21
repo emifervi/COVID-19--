@@ -45,3 +45,14 @@ class Operator(IntEnum):
 
 def cleanString(operand):
     return operand[1:-1]
+
+def getDataType(address):
+    data_type_val = (address % 1000) // 100
+    if data_type_val == 0:
+        return Type.INT
+    elif data_type_val == 1:
+        return Type.FLOAT
+    elif data_type_val == 2:
+        return Type.CHAR
+    elif data_type_val == 3:
+        return Type.STRING

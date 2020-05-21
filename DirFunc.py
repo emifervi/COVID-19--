@@ -20,10 +20,10 @@ class Function:
         self.var_table = var_table
         self.address_dir = FuncAddressDir()
         self.first_quad = 0
-        self.param_types = []
+        self.params = []
 
     def __repr__(self):
-        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n Chunk: \n {self.address_dir} \n Param Types: \n\t {self.param_types}\n'
+        return f'\n Type: {self.return_type.name} \n Vars: \n {self.var_table} \n Chunk: \n {self.address_dir} \n Param Types: \n\t {self.params}\n'
 
 class DirFunc(CovidListener):
     func_table = {}
@@ -69,13 +69,14 @@ class DirFunc(CovidListener):
         # Is a parameter
         if index >= 0:
             self.curr_type = Type[ctx.getChild(index).getText().upper()]
-            self.func_table[self.curr_scope].param_types.append(self.curr_type)
 
         if not var_name in var_table:
             if self.curr_scope == "global":
                 address = self.global_address_dir.getAddress(self.curr_type)
             else:
                 address = self.func_table[self.curr_scope].address_dir.addLocal(self.curr_type)
+                if index >= 0:
+                    self.func_table[self.curr_scope].params.append((address, self.curr_type))
             
             var_table[var_name] = Variable(var_name, self.curr_type, address)
 

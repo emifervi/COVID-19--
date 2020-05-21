@@ -8,7 +8,7 @@ var float j;
 {
     j = a + !b * 3;
 
-    return(!(j+1));
+    return(j+1);
 }
 
 func void func2(int z, string s, float f);
@@ -29,6 +29,6 @@ var string s; float pancake;
         b = b + 1;
     }
 
-    pancake = !func1(1, 'a');
+    pancake = func1(1, 'a');
     func2(1, "str", 2.0);
 }

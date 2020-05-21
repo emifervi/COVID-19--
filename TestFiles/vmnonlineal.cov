@@ -1,0 +1,75 @@
+program Vmnonlineal;
+
+var
+	int A, B, i;
+
+main();
+var int j, t1, t2, nextTerm;
+{
+    print("A value: ");
+    input(A);
+
+    print("B value: ");
+    input(B);
+
+    if(A == 3) {
+        print("A is 3\n");
+    }
+    else {
+        if(A == 2) {
+            print("A is 2 \n");
+        }
+        else {
+            print("A isn't 3\n");
+        }
+    }
+
+    print("With while loop: \n");
+    i = 0;
+    j = 0;
+    while (i < A) {
+        while (j < B) {
+            print("* ");
+            j = j + 1;
+        }
+        j = 0;
+        i = i + 1;
+        print("\n");
+    }
+
+    print("With for loop: \n");
+    for i = 0 to A {
+        for j = 0 to B {
+            print("* \t");
+        }
+        print("\n");
+    }
+
+    print("For with expr: \n");
+    for i = 0 to A + B {
+        print("X");
+    }
+    print("\n");
+
+    print("Fibonacci to ", A, "th term\n");
+    t1 = 0;
+    t2 = 1;
+    nextTerm = 0;
+    for i = 1 to A + 1 {
+        if (i == 1) {
+            print(t1, "\n");
+        }
+        
+        else {
+            if (i == 2) {
+                print (t2, "\n");
+            }
+            else {
+                nextTerm = t1 + t2;
+                t1 = t2;
+                t2 = nextTerm;
+                print(nextTerm, "\n");
+            }
+        }
+    }
+}

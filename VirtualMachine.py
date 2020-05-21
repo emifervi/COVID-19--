@@ -1,9 +1,18 @@
+import sys
 from DirFunc import DirFunc
-from Quadruples import QuadrupleList
+from Quadruples import Quadruple
 from Memory import Memory
-from Utilities import Operator
+from Utilities import Operator, getDataType, Type
+from SemanticCube import semantic_cube
 
 import operator
+
+class Cache:
+    def __init__(self, quad_pos, ctx, local_mem, temp_mem):
+        self.quad_pos = quad_pos
+        self.ctx = ctx
+        self.local_mem = local_mem
+        self.temp_mem = temp_mem
 
 class VirtualMachine:
     
@@ -11,14 +20,22 @@ class VirtualMachine:
         self.func_table = func_table
         self.quad_list = quad_list
         self.cte_mem = cte_mem
-        self.global_mem = Memory(global_addr_dir)
         self.context = "main"
+        self.quad_pos = 0
+        self.memory_stack = []
 
-        self.setContext(self.context)
+        #Prepare for context change
+        self.next_context = None
+        self.next_local_men = None
+        self.next_temp_mem = None
 
-    def setContext(self, func_name):
-        self.local_mem = Memory(self.func_table[func_name].address_dir.local)
-        self.temp_mem = Memory(self.func_table[func_name].address_dir.temp)
+        # Init global memory
+        self.global_mem = Memory(global_addr_dir)
+
+        # Init main memory and context
+        self.context = "main"
+        self.local_mem = Memory(self.func_table["main"].address_dir.local)
+        self.temp_mem = Memory(self.func_table["main"].address_dir.temp)
 
     def resolveMem(self, address):
         if address >= 3000:
@@ -87,8 +104,91 @@ class VirtualMachine:
         else:
             self.global_mem.writeAddress(target_addr, value)
 
+    def performGOTO(self, quad, cond = None):        
+        if cond == None:
+            self.quad_pos = quad.res
+
+        else:
+            op = True if self.resolveMem(quad.op1) != 0 else False
+            if cond == op:
+                self.quad_pos = quad.res
+            else:
+                self.quad_pos += 1
+
+    def performINCR(self, quad):
+        addr = quad.op1
+        val = self.resolveMem(addr) + 1
+        
+        if addr >= 1000:
+            self.local_mem.writeAddress(addr, val)
+        else:
+            self.global_mem.writeAddress(addr, val)
+    
+    def cleanNextContext(self):
+        self.next_local_mem = None
+        self.next_temp_mem = None
+        self.next_context = None
+
+    def performERA(self, quad):
+        self.next_context = quad.op1
+        self.next_local_mem = Memory(self.func_table[quad.op1].address_dir.local)
+        self.next_temp_mem = Memory(self.func_table[quad.op1].address_dir.temp)
+
+    def performPARAM(self, quad):
+        from_address = quad.op1
+        from_type = getDataType(from_address)
+
+        param_num = int(quad.res[3:])
+        dest_addr, dest_type = self.func_table[self.next_context].params[param_num]
+
+        if from_address >= 2000:
+            val = self.temp_mem.getValue(from_address)
+        elif from_address >= 1000:
+            val = self.local_mem.getValue(from_address)
+        else:
+            val = self.global_mem.getValue(from_address)
+
+        result_type = semantic_cube[dest_type][from_type][Operator.ASGN]
+
+        if result_type != None:
+            if result_type == Type.INT:
+                val = int(val)
+            elif result_type == Type.FLOAT:
+                val = float(val)
+
+            self.next_local_mem.writeAddress(dest_addr, val)
+        else:
+            print("Error: Argument type does not match parameter type")
+            sys.exit()
+
+    def performGOSUB(self, quad):
+        self.memory_stack.append(Cache(self.quad_pos + 1, self.context, self.local_mem, self.temp_mem))
+
+        self.context = self.next_context
+        self.local_mem = self.next_local_mem
+        self.temp_mem = self.next_temp_mem
+
+        self.quad_pos = quad.op2
+        self.cleanNextContext()
+
+    def performRETURN(self, quad):
+        asgn_quad = Quadruple(Operator.ASGN, self.func_table["global"].var_table[self.context].address, quad.res)
+        self.performASGN(asgn_quad)
+
+    def performENDPROC(self):
+        cache = self.memory_stack.pop()
+        
+        self.quad_pos = cache.quad_pos
+        self.context = cache.ctx
+        self.local_mem = cache.local_mem
+        self.temp_mem = cache.temp_mem
+
     def run(self):
-        for quad in self.quad_list:
+        while self.quad_pos < len(self.quad_list):
+            quad = self.quad_list[self.quad_pos]
+            # print(f"current quad {self.quad_pos}")
+            # input("Press enter to continue")
+
             #Linear Quads
             if quad.oper == Operator.SUM:
                 self.performArithmetic(quad, operator.add)
@@ -126,26 +226,35 @@ class VirtualMachine:
 
             # NonLinear Quads
             elif quad.oper == Operator.INCR:
-                pass
+                self.performINCR(quad)
             elif quad.oper == Operator.GOTO:
-                pass
+                self.performGOTO(quad)
+                continue
             elif quad.oper == Operator.GOTOF:
-                pass
+                self.performGOTO(quad, False)
+                continue
             elif quad.oper == Operator.GOTOV:
-                pass
+                self.performGOTO(quad, True)
+                continue
             elif quad.oper == Operator.ERA:
+                self.performERA(quad)
                 pass
             elif quad.oper == Operator.PARAM:
+                self.performPARAM(quad)
                 pass
             elif quad.oper == Operator.GOSUB:
-                pass
+                self.performGOSUB(quad)
+                continue
             elif quad.oper == Operator.ENDPROC:
-                pass
+                self.performENDPROC()
+                continue
             elif quad.oper == Operator.RETURN:
-                pass
+                self.performRETURN(quad)
             elif quad.oper == Operator.END:
-                pass
+                sys.exit()
 
             # Undefined
             else:
                 print(f"Quad not caught: {quad.oper}")
+
+            self.quad_pos += 1
