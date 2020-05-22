@@ -1,0 +1,72 @@
+program QuickSort;
+
+var int a[20], limit;
+
+func void printArr();
+var int i;
+{
+    for i = 0 to limit {
+        print(a[i], " ");
+    }
+    print("\n");
+}
+
+func void swap(int x, int y);
+var int temp;
+{
+    temp = a[x];
+    a[x] = a[y];
+    a[y] = temp;
+}
+
+func int partition(int lo, int hi);
+var int pivot, i, j;
+{
+    pivot = a[hi];
+    i = lo - 1;
+
+    for j = lo to hi {
+        if (a[j] < pivot) {
+            i = i + 1;
+            swap(i, j);
+        }
+    }
+
+    swap(i + 1, hi);
+    return(i + 1);
+}
+
+func void quicksort(int lo, int hi);
+var int pi;
+{
+    if (lo < hi) {
+        pi = partition(lo, hi);
+
+        quicksort(lo, pi - 1);
+        quicksort(pi + 1, hi);
+    }
+}
+
+main();
+var int i;
+{   
+    limit = 21;
+    while (limit > 20 || limit <= 0) {
+        print("Size of array (<20): ");
+        input(limit);
+    }
+    
+    // Read array
+    for i = 0 to limit {
+        print("a[", i, "]: ");
+        input(a[i]);
+    }
+
+    print("List before sorting \n");
+    printArr();
+
+    quicksort(0, limit - 1);
+
+    print("List after sorting \n");
+    printArr();
+}

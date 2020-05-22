@@ -7,6 +7,7 @@ class Type(IntEnum):
     STRING = 3
     DATAFRAME = 4
     VOID = 5
+    POINTER = 6
 
     def __repr__(self):
         return f'{self.name}'
@@ -39,6 +40,7 @@ class Operator(IntEnum):
     END = 24
     PARAM = 25
     RETURN = 26
+    VER = 27
 
     def __repr__(self):
         return f'{self.name}'

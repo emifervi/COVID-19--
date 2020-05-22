@@ -4,9 +4,14 @@ grammar Covid;
 
 start		: PROGRAM ID SEMI var_block? func* main ;
 
-var_block	: VAR (tipo ids SEMI)+ ;
+var_block	: VAR (tipo ids_decl SEMI)+ ;
+ids_decl	: ident_decl (COMMA ident_decl)* ;
+ident_decl	: ID (SQUARE_L INT_CTE SQUARE_R)? (SQUARE_L INT_CTE SQUARE_R)? ;
+
 ids			: ident (COMMA ident)* ;
-ident		: ID (SQUARE_L expr SQUARE_R)? (SQUARE_L expr SQUARE_R)? ;
+ident		: ID ident_ind? ident_ind? ;
+ident_ind	: SQUARE_L expr SQUARE_R ;
+
 tipo 		: tipo_atom | DATAFRAME ;
 tipo_atom	: INT | FLOAT | CHAR | STRING ;
 
@@ -52,7 +57,7 @@ artm_terms	: (PLUS | MINUS) fact_term artm_terms | /* empty */ ;
 fact_term	: operand fact_terms ;
 fact_terms	: (MULT | DIVIDE) operand fact_terms | /* empty */ ;
 
-operand		: NOT? PARENS_L expr PARENS_R | NOT? (PLUS | MINUS)? cte | NOT? ident | NOT? call | covid  ;
+operand		: NOT? PARENS_L expr PARENS_R | NOT? cte | NOT? ident | NOT? call | covid  ;
 
 cte 		: INT_CTE | FLOAT_CTE | CHAR_CTE | STRING_CTE ;
 
@@ -133,8 +138,8 @@ PLOT				: 'plot' ;
 HISTOGRAM			: 'histogram' ;
 CORREL				: 'correl' ;
 WS					: [ \t\n]+ -> skip;
-INT_CTE				: DIGIT+ ;
-FLOAT_CTE			: DIGIT+ '.' DIGIT+ ;
+INT_CTE				: '-'? DIGIT+ ;
+FLOAT_CTE			: '-'? DIGIT+ '.' DIGIT+ ;
 STRING_CTE			: '"' .*? '"' ;
 CHAR_CTE			: '\'' .? '\'' ;
 ID					: ALPHA (ALPHA | DIGIT | '_')* ;

@@ -16,6 +16,10 @@ def main(argv):
     parser = CovidParser(stream)
     tree = parser.start()
 
+    if parser.getNumberOfSyntaxErrors() != 0:
+        print("Compilation unsuccessful: Syntax Error(s)")
+        sys.exit()
+
     dir_func = DirFunc()
     walker = ParseTreeWalker()
     walker.walk(dir_func, tree)
@@ -28,12 +32,17 @@ def main(argv):
         dir_func.func_table, 
         quad_list.quad_list, 
         quad_list.cte_address_dir,
+        quad_list.pointer_mem,
         dir_func.global_address_dir
     )
 
-    if len(argv) == 3 and argv[2] == '-d':
-        print(quad_list)
-        
+    if len(argv) >= 3:
+        if '-q' in argv: # prints quadruples
+            print(quad_list)
+        if '-d' in argv: # prints dir func
+            print(dir_func)
+        if '-c' in argv: # prints constant memory
+            print(dir_func.cte_address_dir)
 
     if parser.getNumberOfSyntaxErrors() == 0:
         print("Successful compilation!")

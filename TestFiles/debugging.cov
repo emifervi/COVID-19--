@@ -1,0 +1,12 @@
+program Debugging;
+
+func int foo(int n);
+{
+    return (n);
+}
+
+main();
+var int a[3];
+{
+    print(foo(3), "\n");
+}

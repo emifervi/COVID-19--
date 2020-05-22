@@ -12,10 +12,10 @@ class AddressDir:
             Type.STRING: 0
         }
 
-    def getAddress(self, data_type):
+    def getAddress(self, data_type, size = 1):
         # Return next address
         pointer_val = self.addresses[data_type]
-        self.addresses[data_type] += 1
+        self.addresses[data_type] += size
 
         # Check if stack has been exceeded
         if pointer_val > 100:
@@ -37,6 +37,11 @@ class AddressDir:
 
     def getSize(self):
         return sum(self.addresses.values())
+    
+    def __repr__(self):
+        result = f"Context {self.context}\n Addresses: {self.addresses}\n"
+        return result
+
 
 class GlobalAddressDir(AddressDir):
     def __init__(self):
@@ -78,13 +83,16 @@ class FuncAddressDir:
     def getTempSize(self):
         return sum(self.temp.addresses.values())
     
-    def addLocal(self, data_type):
-        return self.local.getAddress(data_type)
+    def addLocal(self, data_type, size = 1):
+        return self.local.getAddress(data_type, size)
 
     def addTemp(self, data_type):
         return self.temp.getAddress(data_type)
+    
+    def __repr__(self):
+        return f"Local: {self.local}\n Temp: {self.temp}\n"
 
-class CteMemory():
+class CteMemory:
     def __init__(self):
         self.context = 3
 
@@ -125,9 +133,11 @@ class CteMemory():
         if address:
             self.address_table[value] = address
 
+        return address
+
     def getConstant(self, address):
         reduced_addr = (address - 3000) 
-
+        
         if reduced_addr < 100:
             return int(self.addresses[Type.INT][reduced_addr])
         elif reduced_addr < 200:
@@ -136,6 +146,31 @@ class CteMemory():
             return self.addresses[Type.CHAR][reduced_addr - 200]
         else:
             return self.addresses[Type.STRING][reduced_addr - 300]
+    
+    def __repr__(self):
+        return f'Constants \nINT: {self.addresses[Type.INT]}\nFLOAT: {self.addresses[Type.FLOAT]}\nCHAR: {self.addresses[Type.CHAR]}\nSTRING:{self.addresses[Type.STRING]}'
+
+class PointerMemory:
+    pointer_count = 4000
+    pointers = {}
+
+    def getPointer(self):
+        ptr = self.pointer_count
+        self.pointer_count += 1
+        return ptr
+
+    def writePointer(self, ptr, address):
+        self.pointers[ptr] = address
+
+    def getAddress(self, ptr):
+        return self.pointers[ptr]
+
+    def resetPointers(self):
+        self.pointer_count = 4000
+        self.pointers.clear()
+    
+    def __repr__(self):
+        return f"Pointer memory: {self.pointers}"
 
 class Memory:
     def __init__(self, directory):
@@ -147,10 +182,11 @@ class Memory:
         self.size = self.string_pointer + directory.addresses[Type.STRING]
         self.space = [None for x in range(self.size)]
 
-
     def getValue(self, address):
         data_type_val = (address % 1000) // 100
         pointer_val = address % 100
+
+        # print(f"Space: {self.space}")
 
         try:
             # bloque a intentar
@@ -178,4 +214,7 @@ class Memory:
             self.space[self.char_pointer + pointer_val] = value
         elif data_type_val == 3:
             self.space[self.string_pointer + pointer_val] = value
+
+        # print(f"Wrote {value} in {address}")
+        # print(f"Space: {self.space}")
 

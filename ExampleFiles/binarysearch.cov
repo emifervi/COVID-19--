@@ -1,0 +1,44 @@
+program BinarySearch;
+
+var int a[20];
+
+func int binSearch(int left, int right, int target);
+var int mid;
+{
+    if (right >= left) {
+        mid = left + (right - left) / 2;
+
+        if(a[mid] == target){
+            return (mid);
+        }
+
+        if(a[mid] > target){
+            return (binSearch(left, mid - 1, target));
+        }
+
+        return (binSearch(mid + 1, right, target));
+    }
+
+    return (-1);
+}
+
+main();
+var int num, i, limit, result;
+{
+    limit = 21;
+    while (limit > 20 || limit <= 0) {
+        print("Size of array (<20): ");
+        input(limit);
+    }
+
+    // Read array
+    for i = 0 to limit {
+        print("a[", i, "]: ");
+        input(a[i]);
+    }
+
+    print("Number to search: ");
+    input(num);
+    result = binSearch(0, limit, num);
+    print("Result from binSearch: ", result, "\n");
+}

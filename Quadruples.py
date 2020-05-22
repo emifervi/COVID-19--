@@ -1,4 +1,5 @@
 import sys
+from Memory import PointerMemory
 from antlr4 import *
 from enum import IntEnum
 from DirFunc import DirFunc
@@ -26,6 +27,8 @@ class QuadrupleList(CovidListener):
     call_scope = ""
     quad_counter = 0
     k = 0
+
+    pointer_mem = PointerMemory()
 
     def __init__(self, dir_func):
         self.func_table = dir_func.func_table
@@ -65,31 +68,90 @@ class QuadrupleList(CovidListener):
         if len(self.func_table[self.call_scope].params) != self.k:
             print("Error: Number of arguments does not coincide with number of parameters")
             sys.exit()
-    
-    def addOperandToStack(self, var_id):
-        """
-        Checks if the variable exists and adds the operand to the stack
-        base on the scope
-        """
-        local_table = self.func_table[self.curr_scope].var_table
-        global_table = self.func_table["global"].var_table
-
-        if var_id in local_table:
-            self.operand_stack.append((local_table[var_id].address, local_table[var_id].data_type))
-        elif var_id in global_table:
-            self.operand_stack.append((global_table[var_id].address, global_table[var_id].data_type))
-        else:
-            print("Error: use of undeclared variable") # error
-            sys.exit()
-
-    def enterAssignment(self, ctx):
-        self.addOperandToStack(ctx.getChild(0).getText())
-        self.operator_stack.append(Operator.ASGN)
 
     def exitAssignment(self, ctx):
         self.parseAsgnQuad()
 
+    def addOperandToStack(self, var_name):
+        local_table = self.func_table[self.curr_scope].var_table
+        global_table = self.func_table["global"].var_table
+
+        if var_name in local_table:
+            table = local_table 
+        elif var_name in global_table:
+            table = global_table
+        else:
+            print(f"Error: use of undeclared variable: {var_name}")
+            sys.exit()
+
+        # Get relevant data for the var
+        dims = table[var_name].dims
+        start = table[var_name].address
+        address_start = table[var_name].address_pointer
+        data_type = table[var_name].data_type
+        d1_addr = table[var_name].d1
+        d2_addr = table[var_name].d2
+
+        if dims == 1:
+            # Get index
+            s1, s1_type = self.operand_stack.pop()
+
+            if s1_type != Type.INT:
+                print("Error: Array index is not an int")
+                sys.exit()
+            
+            # Verify that index is within bounds
+            ver_quad = Quadruple(Operator.VER, None, s1, d1_addr)
+            self.createQuadruple(ver_quad)
+
+            # Obtain pointer and push to operand stack
+            pointer = self.pointer_mem.getPointer()
+
+            sum_quad = Quadruple(Operator.SUM, pointer, address_start, s1)
+            self.createQuadruple(sum_quad)
+            self.operand_stack.append((pointer, data_type))
+
+        elif dims == 2:
+            # Get indices
+            s2, s2_type = self.operand_stack.pop()
+            s1, s1_type = self.operand_stack.pop()
+            
+            if s1_type != Type.INT or s2_type != Type.INT:
+                print("Error: Array index is not an int")
+                sys.exit()
+
+            # Verify first index is within bounds
+            ver_quad = Quadruple(Operator.VER, None, s1, d1_addr)
+            self.createQuadruple(ver_quad)
+
+            # Shift to proper row
+            mult_res = self.func_table[self.curr_scope].address_dir.addTemp(Type.INT)
+            mult_quad = Quadruple(Operator.MULT, mult_res, s1, d2_addr)
+            self.createQuadruple(mult_quad)
+
+            # Verify second index is withing bounds
+            ver_quad = Quadruple(Operator.VER, None, s2, d2_addr)
+            self.createQuadruple(ver_quad)
+
+            # Apply row shift to start of array 
+            sum_res = self.func_table[self.curr_scope].address_dir.addTemp(Type.INT)
+            sum_quad = Quadruple(Operator.SUM, sum_res, address_start, mult_res)
+            self.createQuadruple(sum_quad)
+
+            # Obtain pointer and push to operand stack
+            pointer = self.pointer_mem.getPointer()
+            sum_quad = Quadruple(Operator.SUM, pointer, sum_res, s2)
+            self.createQuadruple(sum_quad)
+            self.operand_stack.append((pointer, data_type))
+
+        else:
+            self.operand_stack.append((start, data_type))
+
     def exitIdent(self, ctx):
+        if isinstance(ctx.parentCtx, CovidParser.AssignmentContext):
+            self.addOperandToStack(ctx.ID().getText())
+            self.operator_stack.append(Operator.ASGN)
+
         if isinstance(ctx.parentCtx, CovidParser.OperandContext):
             self.addOperandToStack(ctx.ID().getText())
 
@@ -307,6 +369,13 @@ class QuadrupleList(CovidListener):
         else:
             print("Error: Function not defined")
             sys.exit()
+
+    def enterIdent_ind(self, ctx):
+        self.operator_stack.append(Operator.FF)
+
+    def exitIdent_ind(self, ctx):
+        if self.operator_stack[-1] == Operator.FF:
+            self.operator_stack.pop()
 
     def exitRegresa(self, ctx):
         ret, ret_type = self.operand_stack.pop()

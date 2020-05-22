@@ -26,6 +26,24 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#ids_decl.
+    def enterIds_decl(self, ctx:CovidParser.Ids_declContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#ids_decl.
+    def exitIds_decl(self, ctx:CovidParser.Ids_declContext):
+        pass
+
+
+    # Enter a parse tree produced by CovidParser#ident_decl.
+    def enterIdent_decl(self, ctx:CovidParser.Ident_declContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#ident_decl.
+    def exitIdent_decl(self, ctx:CovidParser.Ident_declContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#ids.
     def enterIds(self, ctx:CovidParser.IdsContext):
         pass
@@ -41,6 +59,15 @@ class CovidListener(ParseTreeListener):
 
     # Exit a parse tree produced by CovidParser#ident.
     def exitIdent(self, ctx:CovidParser.IdentContext):
+        pass
+
+
+    # Enter a parse tree produced by CovidParser#ident_ind.
+    def enterIdent_ind(self, ctx:CovidParser.Ident_indContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#ident_ind.
+    def exitIdent_ind(self, ctx:CovidParser.Ident_indContext):
         pass
 
 
