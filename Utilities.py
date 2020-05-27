@@ -41,6 +41,18 @@ class Operator(IntEnum):
     PARAM = 25
     RETURN = 26
     VER = 27
+    FILE = 28
+    DATA = 29
+    AVG = 30
+    MODE = 31
+    RANGE = 32
+    VAR = 33
+    STD_DEV = 34
+    MAX = 35
+    MIN = 36
+    CORREL = 37
+    PLOT = 38
+    HIST = 39
 
     def __repr__(self):
         return f'{self.name}'

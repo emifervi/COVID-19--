@@ -4,7 +4,9 @@ from Quadruples import Quadruple
 from Memory import Memory
 from Utilities import Operator, getDataType, Type
 from SemanticCube import semantic_cube
-
+from os import path
+import pandas as pd
+import matplotlib.pyplot as plt
 import operator
 
 class Cache:
@@ -23,6 +25,8 @@ class VirtualMachine:
         self.context = "main"
         self.quad_pos = 0
         self.memory_stack = []
+        self.file_path = None
+        self.dataframe = None
 
         #Prepare for context change
         self.next_context = None
@@ -170,11 +174,15 @@ class VirtualMachine:
 
     def performPARAM(self, quad):
         from_address = quad.op1
+
+        if from_address >= 5000:
+            return
+        
         from_type = getDataType(from_address)
 
         param_num = int(quad.res[3:])
         dest_addr, dest_type = self.func_table[self.next_context].params[param_num]
-
+    
         if from_address >= 3000:
             val = self.cte_mem.getConstant(from_address)
         elif from_address >= 2000:
@@ -221,14 +229,67 @@ class VirtualMachine:
         self.temp_mem = cache.temp_mem
     
     def performVER(self, quad):
-        # print(f"index: {self.resolveMem(quad.op1)}")
-        # print(f"lim: {self.resolveMem(quad.op2)}")
-        #print()
-
         if self.resolveMem(quad.op2) <= self.resolveMem(quad.op1) or self.resolveMem(quad.op1) < 0:
             print("Error: Index out of range for array")
             sys.exit()
+    
+    def performFILE(self, quad):
+        file_path = self.resolveMem(quad.op1)
+        if file_path[-4:] != ".csv":
+            print("Error: File should be .csv format")
+            sys.exit()
+        if not path.exists(file_path):
+            print("Error: File could not be opened")
+            sys.exit()
+        else:
+            self.file_path = file_path
+    
+    def performDATA(self,quad):
+        self.dataframe = pd.read_csv(self.file_path)
 
+        self.writeResult(quad.op1, len(self.dataframe.index))
+        self.writeResult(quad.op2, len(self.dataframe.columns))
+    
+    def performAVG(self, quad):
+        avg = self.dataframe[self.resolveMem(quad.op1)].mean()
+        self.writeResult(quad.res, avg)
+
+    def performMODE(self, quad):
+        mode = self.dataframe[self.resolveMem(quad.op1)].mode()
+        self.writeResult(quad.res, mode)
+    
+    def performRANGE(self, quad):
+        rango = self.dataframe[self.resolveMem(quad.op1)].max() - self.dataframe[self.resolveMem(quad.op1)].min()
+        self.writeResult(quad.res, rango)
+    
+    def performVAR(self, quad):
+        variance = self.dataframe[self.resolveMem(quad.op1)].var()
+        self.writeResult(quad.res, variance)
+    
+    def performSTD_DEV(self, quad):
+        std_dev = self.dataframe[self.resolveMem(quad.op1)].std()
+        self.writeResult(quad.res, std_dev)
+    
+    def performMAX(self, quad):
+        maxi = self.dataframe[self.resolveMem(quad.op1)].max()
+        self.writeResult(quad.res, maxi)
+    
+    def performMIN(self, quad):
+        mini = self.dataframe[self.resolveMem(quad.op1)].min()
+        self.writeResult(quad.res, mini)
+    
+    def performCORREL(self, quad):
+        correl = self.dataframe[self.resolveMem(quad.op1)].corr(self.dataframe[self.resolveMem(quad.op2)])
+        self.writeResult(quad.res, correl)
+    
+    def performPLOT(self, quad):
+        self.dataframe.plot(x = self.resolveMem(quad.op1), y = self.resolveMem(quad.op2), kind='scatter')
+        plt.show()
+    
+    def performHIST(self, quad):
+        self.dataframe.hist(self.resolveMem(quad.op1), bins=self.resolveMem(quad.op2), grid=False)
+        plt.show()
+    
     def run(self):
         while self.quad_pos < len(self.quad_list):
             quad = self.quad_list[self.quad_pos]
@@ -303,6 +364,32 @@ class VirtualMachine:
             elif quad.oper == Operator.VER:
                 self.performVER(quad)
 
+            # COVID Quads
+            elif quad.oper == Operator.FILE:
+                self.performFILE(quad)
+            elif quad.oper == Operator.DATA:
+                self.performDATA(quad)
+            elif quad.oper == Operator.AVG:
+                self.performAVG(quad)
+            elif quad.oper == Operator.MODE:
+                self.performMODE(quad)
+            elif quad.oper == Operator.RANGE:
+                self.performRANGE(quad)
+            elif quad.oper == Operator.VAR:
+                self.performVAR(quad)
+            elif quad.oper == Operator.STD_DEV:
+                self.performSTD_DEV(quad)
+            elif quad.oper == Operator.MAX:
+                self.performMAX(quad)
+            elif quad.oper == Operator.MIN:
+                self.performMIN(quad)
+            elif quad.oper == Operator.CORREL:
+                self.performCORREL(quad)
+            elif quad.oper == Operator.PLOT:
+                self.performPLOT(quad)
+            elif quad.oper == Operator.HIST:
+                self.performHIST(quad)
+            
             # Undefined
             else:
                 print(f"Quad not caught: {quad.oper}")

@@ -17,6 +17,15 @@ class CovidListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CovidParser#gb_var_block.
+    def enterGb_var_block(self, ctx:CovidParser.Gb_var_blockContext):
+        pass
+
+    # Exit a parse tree produced by CovidParser#gb_var_block.
+    def exitGb_var_block(self, ctx:CovidParser.Gb_var_blockContext):
+        pass
+
+
     # Enter a parse tree produced by CovidParser#var_block.
     def enterVar_block(self, ctx:CovidParser.Var_blockContext):
         pass
@@ -482,15 +491,6 @@ class CovidListener(ParseTreeListener):
 
     # Exit a parse tree produced by CovidParser#mini.
     def exitMini(self, ctx:CovidParser.MiniContext):
-        pass
-
-
-    # Enter a parse tree produced by CovidParser#moment.
-    def enterMoment(self, ctx:CovidParser.MomentContext):
-        pass
-
-    # Exit a parse tree produced by CovidParser#moment.
-    def exitMoment(self, ctx:CovidParser.MomentContext):
         pass
 
 

@@ -9,7 +9,8 @@ class AddressDir:
             Type.INT: 0,
             Type.FLOAT: 0,
             Type.CHAR: 0,
-            Type.STRING: 0
+            Type.STRING: 0,
+            Type.DATAFRAME: 0
         }
 
     def getAddress(self, data_type, size = 1):
@@ -178,8 +179,9 @@ class Memory:
         self.float_pointer = self.int_pointer + directory.addresses[Type.INT]
         self.char_pointer = self.float_pointer + directory.addresses[Type.FLOAT]
         self.string_pointer = self.char_pointer + directory.addresses[Type.CHAR]
+        self.df_pointer = self.string_pointer + directory.addresses[Type.STRING]
 
-        self.size = self.string_pointer + directory.addresses[Type.STRING]
+        self.size = self.df_pointer + directory.addresses[Type.DATAFRAME]
         self.space = [None for x in range(self.size)]
 
     def getValue(self, address):
@@ -217,4 +219,3 @@ class Memory:
 
         # print(f"Wrote {value} in {address}")
         # print(f"Space: {self.space}")
-

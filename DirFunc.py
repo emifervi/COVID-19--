@@ -15,7 +15,7 @@ class Variable:
         self.d2 = d2
 
     def __repr__(self):
-        return f'\t Type: {self.data_type.name} \t Address: {self.address}  \t Dims: {self.dims} \t d1 = {self.d1} \t d2 = {self.d2} \n'
+        return f'\tName: {self.name}\t Type: {self.data_type.name} \t Address: {self.address}  \t Dims: {self.dims} \t d1 = {self.d1} \t d2 = {self.d2} \n'
 
 class Function:
     def __init__(self, name = "", return_type = None, var_table = {}):
@@ -38,6 +38,8 @@ class DirFunc(CovidListener):
 
     global_address_dir = GlobalAddressDir()
     cte_address_dir = CteMemory()
+
+    dataframe_mem = None
 
     def enterStart(self, ctx):
         self.func_table["global"] = Function("global", Type.VOID, {})
@@ -125,7 +127,11 @@ class DirFunc(CovidListener):
             var_table[var_name] = Variable(var_name, self.curr_type, address, dim, address_d1, address_d2, address_pointer)
 
     def exitIdent_decl(self, ctx):
-        self.addVariable(ctx, -1)
+        if self.curr_type == Type.DATAFRAME:
+            df_name = ctx.getText()
+            self.func_table["global"].var_table[df_name] = Variable(df_name, Type.DATAFRAME, 900)
+        else:
+            self.addVariable(ctx, -1)
 
     def enterParams(self, ctx):
         self.addVariable(ctx, 0)

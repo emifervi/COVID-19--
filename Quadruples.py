@@ -152,7 +152,8 @@ class QuadrupleList(CovidListener):
             self.addOperandToStack(ctx.ID().getText())
             self.operator_stack.append(Operator.ASGN)
 
-        if isinstance(ctx.parentCtx, CovidParser.OperandContext):
+        if (isinstance(ctx.parentCtx, CovidParser.OperandContext) or
+            isinstance(ctx.parentCtx.parentCtx, CovidParser.CovidContext)):
             self.addOperandToStack(ctx.ID().getText())
 
         if isinstance(ctx.parentCtx.parentCtx, CovidParser.ReadContext):
@@ -490,7 +491,6 @@ class QuadrupleList(CovidListener):
         self.parseFourTupleQuad([Operator.SUM, Operator.SUB])
 
     def exitOperand(self, ctx):
-
         if not self.operator_stack:
             return
 
@@ -514,6 +514,134 @@ class QuadrupleList(CovidListener):
     def createQuadruple(self, quad):
         self.quad_list.append(quad)
         self.quad_counter += 1
+
+    def exitLoad_file(self, ctx):
+        operand, data_type = self.operand_stack.pop()
+        
+        if data_type == Type.STRING:
+            quad = Quadruple(Operator.FILE, None, operand)
+            self.createQuadruple(quad)
+        else:
+            print("Error: Argument must be of type string")
+            sys.exit()
+    
+    def exitLoad_data(self, ctx):
+        cols, cols_type = self.operand_stack.pop()
+        rows, rows_type = self.operand_stack.pop()
+        _, df_type = self.operand_stack.pop()
+
+        # Check argument types
+        if df_type != Type.DATAFRAME:
+            print("Error: load_data() first argument must be of type dataframe")
+            sys.exit()
+        
+        if rows_type != Type.INT:
+            print("Error: load_data() first argument must be of type int")
+            sys.exit()
+
+        if cols_type != Type.INT:
+            print("Error: load_data() first argument must be of type int")
+            sys.exit()
+
+        quad = Quadruple(Operator.DATA, None, rows, cols)
+        self.createQuadruple(quad)
+
+    def parseCovidSimpleQuad(self, oper, name):
+        col, col_type = self.operand_stack.pop()
+        _, df_type = self.operand_stack.pop()
+
+        # Check argument types
+        if df_type != Type.DATAFRAME:
+            print(f"Error: {name}() first argument must be of type dataframe")
+            sys.exit()
+        
+        if col_type != Type.STRING:
+            print(f"Error: {name}() first argument must be of type string")
+            sys.exit()
+
+        # Create Simple Quad and store result in temp 
+        avg_res = self.func_table[self.curr_scope].address_dir.addTemp(Type.FLOAT)
+        quad = Quadruple(oper, avg_res, col)
+        self.createQuadruple(quad)
+        self.operand_stack.append((avg_res, Type.FLOAT))
+
+    def exitAvg(self, ctx):
+        self.parseCovidSimpleQuad(Operator.AVG, "avg")
+
+    def exitModa(self, ctx):
+        self.parseCovidSimpleQuad(Operator.MODE, "mode")
+
+    def exitRango(self, ctx):
+        self.parseCovidSimpleQuad(Operator.RANGE, "range")
+
+    def exitVariance(self, ctx):
+        self.parseCovidSimpleQuad(Operator.VAR, "variance")
+
+    def exitStd_dev(self, ctx):
+        self.parseCovidSimpleQuad(Operator.STD_DEV, "std_dev")
+
+    def exitMaxi(self, ctx):
+        self.parseCovidSimpleQuad(Operator.MAX, "max")
+
+    def exitMini(self, ctx):
+        self.parseCovidSimpleQuad(Operator.MIN, "min")
+
+    def parseCovidComplexQuad(self, oper, name, gives_result):
+        var1, var1_type = self.operand_stack.pop()
+        var2, var2_type = self.operand_stack.pop()
+        _, df_type = self.operand_stack.pop()
+
+        # Check argument types
+        if df_type != Type.DATAFRAME:
+            print(f"Error: {name}() first argument must be of type dataframe")
+            sys.exit()
+        
+        if var1_type != Type.STRING:
+            print(f"Error: {name}() second argument must be of type string")
+            sys.exit()
+        
+        if var2_type != Type.STRING:
+            print(f"Error: {name}() third argument must be of type string")
+            sys.exit()
+
+        # Create Complex Quad and store result in temp 
+        if gives_result:
+            corr_res = self.func_table[self.curr_scope].address_dir.addTemp(Type.FLOAT)
+        else:
+            corr_res = None
+
+        quad = Quadruple(oper, corr_res, var1, var2)
+        self.createQuadruple(quad)
+        
+        if gives_result:
+            self.operand_stack.append((corr_res, Type.FLOAT))
+
+    def exitCorrel(self, ctx):
+        self.parseCovidComplexQuad(Operator.CORREL, "correl", True)
+    
+    def exitPlot(self, ctx):
+        self.parseCovidComplexQuad(Operator.PLOT, "plot", False)
+
+    def exitHistogram(self, ctx):
+        bins, bins_type = self.operand_stack.pop()
+        col, col_type = self.operand_stack.pop()
+        _, df_type = self.operand_stack.pop()
+
+        # Check argument types
+        if df_type != Type.DATAFRAME:
+            print(f"Error: histogram() first argument must be of type dataframe")
+            sys.exit()
+        
+        if col_type != Type.STRING:
+            print(f"Error: histogram() second argument must be of type string")
+            sys.exit()
+        
+        if bins_type != Type.INT:
+            print(f"Error: histogram() third argument must be of type int")
+            sys.exit()
+
+        quad = Quadruple(Operator.HIST, None, col, bins)
+        self.createQuadruple(quad)
 
     def __repr__(self):
         result_list = ""
