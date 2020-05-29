@@ -1,0 +1,32 @@
+program Factorial;
+
+func int fact(int n);
+var int i, res;
+{
+    res = 1;
+    for i = 2 to n + 1 {
+        res = res * i;
+    }   
+
+    return(res);
+}
+
+
+func int fact_recursive(int n);
+{
+	if (n == 0) {
+		return(1);
+	} else {
+		return(n * fact_recursive(n - 1) );
+	}
+}
+
+main();
+var int i;
+{   
+    print("Input number to get Factorial: ");
+    input(i);
+    
+    print("Fact Iterative: ", fact(i), "\n");
+    print("Fact Recursive: ", fact_recursive(i), "\n");
+}

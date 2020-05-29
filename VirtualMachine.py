@@ -15,6 +15,9 @@ class Cache:
         self.ctx = ctx
         self.local_mem = local_mem
         self.temp_mem = temp_mem
+    
+    def __repr__(self):
+        return f'{self.quad_pos} - {self.ctx}'
 
 class VirtualMachine:
     
@@ -22,16 +25,10 @@ class VirtualMachine:
         self.func_table = func_table
         self.quad_list = quad_list
         self.cte_mem = cte_mem
-        self.context = "main"
-        self.quad_pos = 0
-        self.memory_stack = []
+        self.ctx_stack = []
+        self.call_stack = []
         self.file_path = None
         self.dataframe = None
-
-        #Prepare for context change
-        self.next_context = None
-        self.next_local_men = None
-        self.next_temp_mem = None
 
         # Init global memory
         self.global_mem = Memory(global_addr_dir)
@@ -40,9 +37,9 @@ class VirtualMachine:
         self.pointer_mem = pointer_mem
 
         # Init main memory and context
-        self.context = "main"
-        self.local_mem = Memory(self.func_table["main"].address_dir.local)
-        self.temp_mem = Memory(self.func_table["main"].address_dir.temp)
+        local_mem = Memory(self.func_table["main"].address_dir.local)
+        temp_mem = Memory(self.func_table["main"].address_dir.temp)
+        self.ctx_stack.append(Cache(0, "main", local_mem, temp_mem))
 
     def performPRINT(self, quad):
         # Solves new lines and tabs to simulate escaped sequences
@@ -55,9 +52,9 @@ class VirtualMachine:
         if address >= 3000:
             return self.cte_mem.getConstant(address)
         if address >= 2000:
-            return self.temp_mem.getValue(address)
+            return self.ctx_stack[-1].temp_mem.getValue(address)
         if address >= 1000:            
-            return self.local_mem.getValue(address)
+            return self.ctx_stack[-1].local_mem.getValue(address)
         else:
             return self.global_mem.getValue(address)
     
@@ -65,15 +62,19 @@ class VirtualMachine:
         if address >= 4000:
             self.pointer_mem.writePointer(address, result)
         elif address >= 2000:
-            self.temp_mem.writeAddress(address, result)
+            self.ctx_stack[-1].temp_mem.writeAddress(address, result)
         elif address >= 1000:
-            self.local_mem.writeAddress(address, result)
+            self.ctx_stack[-1].local_mem.writeAddress(address, result)
         else:
             self.global_mem.writeAddress(address, result)
             
     def performArithmetic(self, quad, oper):
-        result = oper(self.resolveMem(quad.op1), self.resolveMem(quad.op2))
-        self.writeResult(quad.res, result)
+        try:
+            result = oper(self.resolveMem(quad.op1), self.resolveMem(quad.op2))
+            self.writeResult(quad.res, result)
+        except ZeroDivisionError:
+            print("[Error] Division by zero")
+            sys.exit()
 
     def performLogical(self, quad, oper):
         result = 1 if oper(self.resolveMem(quad.op1), self.resolveMem(quad.op2)) else 0
@@ -112,9 +113,9 @@ class VirtualMachine:
             val = float(val)
 
         if addr >= 2000:
-            self.temp_mem.writeAddress(addr, val)
+            self.ctx_stack[-1].temp_mem.writeAddress(addr, val)
         elif addr >= 1000:
-            self.local_mem.writeAddress(addr, val)
+            self.ctx_stack[-1].local_mem.writeAddress(addr, val)
         else:
             self.global_mem.writeAddress(addr, val)
 
@@ -136,41 +137,37 @@ class VirtualMachine:
             quad = Quadruple(Operator.ASGN, self.pointer_mem.getAddress(target_addr), quad.op1)
             self.performASGN(quad)
         elif target_addr >= 2000:
-            self.temp_mem.writeAddress(target_addr, value)
+            self.ctx_stack[-1].temp_mem.writeAddress(target_addr, value)
         elif target_addr >= 1000:
-            self.local_mem.writeAddress(target_addr, value)
+            self.ctx_stack[-1].local_mem.writeAddress(target_addr, value)
         else:
             self.global_mem.writeAddress(target_addr, value)
 
     def performGOTO(self, quad, cond = None):        
         if cond == None:
-            self.quad_pos = quad.res
+            self.ctx_stack[-1].quad_pos = quad.res
 
         else:
             op = True if self.resolveMem(quad.op1) != 0 else False
             if cond == op:
-                self.quad_pos = quad.res
+                self.ctx_stack[-1].quad_pos = quad.res
             else:
-                self.quad_pos += 1
+                self.ctx_stack[-1].quad_pos += 1
 
     def performINCR(self, quad):
         addr = quad.op1
         val = self.resolveMem(addr) + 1
         
         if addr >= 1000:
-            self.local_mem.writeAddress(addr, val)
+            self.ctx_stack[-1].local_mem.writeAddress(addr, val)
         else:
             self.global_mem.writeAddress(addr, val)
-    
-    def cleanNextContext(self):
-        self.next_local_mem = None
-        self.next_temp_mem = None
-        self.next_context = None
 
     def performERA(self, quad):
-        self.next_context = quad.op1
-        self.next_local_mem = Memory(self.func_table[quad.op1].address_dir.local)
-        self.next_temp_mem = Memory(self.func_table[quad.op1].address_dir.temp)
+        next_local_mem = Memory(self.func_table[quad.op1].address_dir.local)
+        next_temp_mem = Memory(self.func_table[quad.op1].address_dir.temp)
+        next_context = quad.op1
+        self.call_stack.append(Cache(None, next_context, next_local_mem, next_temp_mem))
 
     def performPARAM(self, quad):
         from_address = quad.op1
@@ -181,14 +178,18 @@ class VirtualMachine:
         from_type = getDataType(from_address)
 
         param_num = int(quad.res[3:])
-        dest_addr, dest_type = self.func_table[self.next_context].params[param_num]
-    
-        if from_address >= 3000:
+        dest_addr, dest_type = self.func_table[self.call_stack[-1].ctx].params[param_num]
+
+        if from_address >= 4000:
+            quad = Quadruple(Operator.PARAM, quad.res, self.pointer_mem.getAddress(from_address))
+            self.performPARAM(quad)
+            return
+        elif from_address >= 3000:
             val = self.cte_mem.getConstant(from_address)
         elif from_address >= 2000:
-            val = self.temp_mem.getValue(from_address)
+            val = self.ctx_stack[-1].temp_mem.getValue(from_address)
         elif from_address >= 1000:
-            val = self.local_mem.getValue(from_address)
+            val = self.ctx_stack[-1].local_mem.getValue(from_address)
         else:
             val = self.global_mem.getValue(from_address)
 
@@ -200,46 +201,39 @@ class VirtualMachine:
             elif result_type == Type.FLOAT:
                 val = float(val)
 
-            self.next_local_mem.writeAddress(dest_addr, val)
+            self.call_stack[-1].local_mem.writeAddress(dest_addr, val)
         else:
-            print("Error: Argument type does not match parameter type")
+            print("[Error]: Argument type does not match parameter type")
             sys.exit()
 
     def performGOSUB(self, quad):
-        self.memory_stack.append(Cache(self.quad_pos + 1, self.context, self.local_mem, self.temp_mem))
+        # When returning from func, return to next quad
+        self.ctx_stack[-1].quad_pos += 1
 
-        self.context = self.next_context
-        self.local_mem = self.next_local_mem
-        self.temp_mem = self.next_temp_mem
-
-        self.quad_pos = quad.op2
-        self.cleanNextContext()
+        # Save where we're going and change context from current one to next call
+        self.call_stack[-1].quad_pos = quad.op2
+        self.ctx_stack.append(self.call_stack.pop())
 
     def performRETURN(self, quad):
-        asgn_quad = Quadruple(Operator.ASGN, self.func_table["global"].var_table[self.context].address, quad.res)
+        asgn_quad = Quadruple(Operator.ASGN, self.func_table["global"].var_table[self.ctx_stack[-1].ctx].address, quad.res)
         self.performASGN(asgn_quad)
         self.performENDPROC()
 
     def performENDPROC(self):
-        cache = self.memory_stack.pop()
-        
-        self.quad_pos = cache.quad_pos
-        self.context = cache.ctx
-        self.local_mem = cache.local_mem
-        self.temp_mem = cache.temp_mem
+        self.ctx_stack.pop()
     
     def performVER(self, quad):
         if self.resolveMem(quad.op2) <= self.resolveMem(quad.op1) or self.resolveMem(quad.op1) < 0:
-            print("Error: Index out of range for array")
+            print("[Error] Index out of range for array")
             sys.exit()
     
     def performFILE(self, quad):
         file_path = self.resolveMem(quad.op1)
         if file_path[-4:] != ".csv":
-            print("Error: File should be .csv format")
+            print("[Error] File should be .csv format")
             sys.exit()
         if not path.exists(file_path):
-            print("Error: File could not be opened")
+            print("[Error] File could not be opened")
             sys.exit()
         else:
             self.file_path = file_path
@@ -251,49 +245,89 @@ class VirtualMachine:
         self.writeResult(quad.op2, len(self.dataframe.columns))
     
     def performAVG(self, quad):
-        avg = self.dataframe[self.resolveMem(quad.op1)].mean()
-        self.writeResult(quad.res, avg)
+        try:
+            avg = self.dataframe[self.resolveMem(quad.op1)].mean()
+            self.writeResult(quad.res, avg)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
 
     def performMODE(self, quad):
-        mode = self.dataframe[self.resolveMem(quad.op1)].mode()
-        self.writeResult(quad.res, mode)
+        try:
+            mode = self.dataframe[self.resolveMem(quad.op1)].mode()
+            self.writeResult(quad.res, mode)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performRANGE(self, quad):
-        rango = self.dataframe[self.resolveMem(quad.op1)].max() - self.dataframe[self.resolveMem(quad.op1)].min()
-        self.writeResult(quad.res, rango)
+        try:
+            rango = self.dataframe[self.resolveMem(quad.op1)].max() - self.dataframe[self.resolveMem(quad.op1)].min()
+            self.writeResult(quad.res, rango)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performVAR(self, quad):
-        variance = self.dataframe[self.resolveMem(quad.op1)].var()
-        self.writeResult(quad.res, variance)
+        try:
+            variance = self.dataframe[self.resolveMem(quad.op1)].var()
+            self.writeResult(quad.res, variance)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performSTD_DEV(self, quad):
-        std_dev = self.dataframe[self.resolveMem(quad.op1)].std()
-        self.writeResult(quad.res, std_dev)
+        try:
+            std_dev = self.dataframe[self.resolveMem(quad.op1)].std()
+            self.writeResult(quad.res, std_dev)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performMAX(self, quad):
-        maxi = self.dataframe[self.resolveMem(quad.op1)].max()
-        self.writeResult(quad.res, maxi)
+        try:
+            maxi = self.dataframe[self.resolveMem(quad.op1)].max()
+            self.writeResult(quad.res, maxi)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performMIN(self, quad):
-        mini = self.dataframe[self.resolveMem(quad.op1)].min()
-        self.writeResult(quad.res, mini)
+        try:
+            mini = self.dataframe[self.resolveMem(quad.op1)].min()
+            self.writeResult(quad.res, mini)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performCORREL(self, quad):
-        correl = self.dataframe[self.resolveMem(quad.op1)].corr(self.dataframe[self.resolveMem(quad.op2)])
-        self.writeResult(quad.res, correl)
+        try:
+            correl = self.dataframe[self.resolveMem(quad.op1)].corr(self.dataframe[self.resolveMem(quad.op2)])
+            self.writeResult(quad.res, correl)
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performPLOT(self, quad):
-        self.dataframe.plot(x = self.resolveMem(quad.op1), y = self.resolveMem(quad.op2), kind='scatter')
-        plt.show()
+        try:
+            self.dataframe.plot(x = self.resolveMem(quad.op1), y = self.resolveMem(quad.op2), kind='scatter')
+            plt.show()
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def performHIST(self, quad):
-        self.dataframe.hist(self.resolveMem(quad.op1), bins=self.resolveMem(quad.op2), grid=False)
-        plt.show()
+        try:
+            self.dataframe.hist(self.resolveMem(quad.op1), bins=self.resolveMem(quad.op2), grid=False)
+            plt.show()
+        except TypeError:
+            print("[Error] Dataframe key not found in file.")
+            sys.exit()
     
     def run(self):
-        while self.quad_pos < len(self.quad_list):
-            quad = self.quad_list[self.quad_pos]
-            # print(f"Current quad: {self.quad_pos}")
+        while self.ctx_stack[-1].quad_pos < len(self.quad_list):
+            quad = self.quad_list[self.ctx_stack[-1].quad_pos]
+            # print(f"Current quad: {self.ctx_stack[-1].quad_pos}")
             # input("Press enter to continue")
 
             #Linear Quads
@@ -394,4 +428,4 @@ class VirtualMachine:
             else:
                 print(f"Quad not caught: {quad.oper}")
 
-            self.quad_pos += 1
+            self.ctx_stack[-1].quad_pos += 1

@@ -1,25 +1,10 @@
-program Debugging;
-var dataframe data;
+program Dataframe;
+var 
+    dataframe data;
+    int i[1];
 
 main();
-var int rows, cols;
-    float res;
-{
+{   
     load_file("song_data_clean.csv");
-    load_data(data, rows, cols);
-
-    print("Number of rows: ", rows, "\n");
-    print("Number of cols: ", cols, "\n");
-
-    print("\nAverage: ", avg(data, "song_popularity"), "\n");
-    print("Mode: ", mode(data, "song_popularity"), "\n");
-    print("Range: ", range(data, "song_popularity"), "\n");
-    print("Variance: ", variance(data, "song_popularity"), "\n");
-    print("Std_Dev: ", std_dev(data, "song_popularity"), "\n");
-    print("Max: ", max(data, "song_popularity"), "\n");
-    print("Min: ", min(data, "song_popularity"), "\n");
-    print("Correl: ", correl(data, "song_popularity", "audio_valence"), "\n");
-
-    plot(data, "song_popularity", "audio_valence");
-    histogram(data, "song_popularity", 100);
+    max(data, "asdf");
 }

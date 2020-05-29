@@ -28,13 +28,13 @@ var int t1, t2, nextTerm;
     }
 }
 
-func int fib_recurse(int n);
+func int fib_recursive(int n);
 {
     if(n <= 1) {
         return (n);
     }
     else {
-        return (fib_recurse(n - 1) + fib_recurse(n - 2));
+        return (fib_recursive(n - 1) + fib_recursive(n - 2));
     }
 }
 
@@ -49,6 +49,6 @@ var int j;
 
     print("Fib recursivo: \n");
     for j = 0 to A {
-        print(fib_recurse(j), "\n");
+        print(fib_recursive(j), "\n");
     }
 }

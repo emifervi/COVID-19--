@@ -40,6 +40,7 @@ class DirFunc(CovidListener):
     cte_address_dir = CteMemory()
 
     dataframe_mem = None
+    dataframe_exists = False
 
     def enterStart(self, ctx):
         self.func_table["global"] = Function("global", Type.VOID, {})
@@ -67,6 +68,9 @@ class DirFunc(CovidListener):
             if func_type != Type.VOID:
                 func_address = self.global_address_dir.getAddress(func_type)
                 self.func_table["global"].var_table[func_name] = Variable(func_name, func_type, func_address)
+        else:
+            print(f"[Error: {ctx.start.line}] Redefinition of function {func_name}")
+            sys.exit()
 
     def addVariable(self, ctx, index):
         var_name = ctx.ID().getText()
@@ -125,11 +129,20 @@ class DirFunc(CovidListener):
                 address_d2 = self.cte_address_dir.address_table[d2_str]
 
             var_table[var_name] = Variable(var_name, self.curr_type, address, dim, address_d1, address_d2, address_pointer)
+        
+        else:
+            print(f"[Error: {ctx.start.line}] Redefinition of variable {var_name}")
+            sys.exit()
 
     def exitIdent_decl(self, ctx):
         if self.curr_type == Type.DATAFRAME:
+            if self.dataframe_exists:
+                print(f"[Error: {ctx.start.line}] Only one dataframe allowed per program")
+                sys.exit()
+            
             df_name = ctx.getText()
             self.func_table["global"].var_table[df_name] = Variable(df_name, Type.DATAFRAME, 900)
+            self.dataframe_exists = True
         else:
             self.addVariable(ctx, -1)
 

@@ -39,6 +39,6 @@ var int num, i, limit, result;
 
     print("Number to search: ");
     input(num);
-    result = binSearch(0, limit, num);
+    result = binSearch(0, limit - 1, num);
     print("Result from binSearch: ", result, "\n");
 }

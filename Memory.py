@@ -19,8 +19,8 @@ class AddressDir:
         self.addresses[data_type] += size
 
         # Check if stack has been exceeded
-        if pointer_val > 100:
-            print("Error: Memory stack exceeded for type and context")
+        if self.addresses[data_type] > 100:
+            print("[Error] Memory stack exceeded for type and context")
             sys.exit()
 
         context_val = self.context * 1000
@@ -113,7 +113,7 @@ class CteMemory:
 
         # Check if stack has been exceeded
         if pointer_val > 100:
-            print("Error: Memory stack exceeded for type and context")
+            print("[Error] Memory stack exceeded for type and context")
             sys.exit()
 
         context_val = self.context * 1000
@@ -138,7 +138,7 @@ class CteMemory:
 
     def getConstant(self, address):
         reduced_addr = (address - 3000) 
-        
+
         if reduced_addr < 100:
             return int(self.addresses[Type.INT][reduced_addr])
         elif reduced_addr < 200:
@@ -189,6 +189,7 @@ class Memory:
         pointer_val = address % 100
 
         # print(f"Space: {self.space}")
+        # print(f"Address: {address}")
 
         try:
             # bloque a intentar
@@ -201,7 +202,7 @@ class Memory:
             elif data_type_val == 3:
                 return self.space[self.string_pointer + pointer_val]
         except:
-            print("Error: uninitialized variable")
+            print("[Error] uninitialized variable")
             sys.exit()
         
     def writeAddress(self, address, value):
