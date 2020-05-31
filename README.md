@@ -196,3 +196,6 @@ Check [ExampleFiles](https://github.com/emifervi/COVID-19--/tree/master/ExampleF
 
 # More Documentation
 For more documentation, check [Documentation](https://github.com/emifervi/COVID-19--/tree/master/Documentation.pdf).
+
+# Mini Tutorial
+[Click here to watch a mini tutorial](https://drive.google.com/file/d/1_ShoCekp7NK0e6kNw0DSfooxUNW1i7GD/view?usp=sharing).
