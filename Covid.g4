@@ -133,7 +133,6 @@ VARIANCE			: 'variance' ;
 STD_DEV				: 'std_dev' ;
 MAX					: 'max' ;
 MIN					: 'min' ;
-MOMENT				: 'moment' ;
 PLOT				: 'plot' ;
 HISTOGRAM			: 'histogram' ;
 CORREL				: 'correl' ;

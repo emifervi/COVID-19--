@@ -9,6 +9,9 @@ from antlr.CovidListener import CovidListener
 from antlr.CovidParser import CovidParser
 
 class Quadruple:
+    """
+    Class for quadruple. Contains operation, operands and result
+    """
     def __init__(self, oper, res, op1, op2=None):
         self.oper = oper
         self.op1 = op1
@@ -19,6 +22,10 @@ class Quadruple:
         return f'({self.oper.name}, {self.op1}, {self.op2}, {self.res})\n'
 
 class QuadrupleList(CovidListener):
+    """
+    Generates a list of quads for intermediate code repr. and does semantic checks
+    """
+
     quad_list = []
     operand_stack = []
     operator_stack = []
@@ -37,24 +44,25 @@ class QuadrupleList(CovidListener):
         self.createQuadruple(Quadruple(Operator.GOTO,None,None,None))
 
     def changeFuncContext(self, func_name):
-        """
-        Updates runtime scope
-        """
+        # Updates current scope and updates quad counter
         self.curr_scope = func_name
 
         self.func_table[func_name].first_quad = self.quad_counter
 
     def enterFunc(self, ctx):
+        # Change context and get func type
         self.changeFuncContext(ctx.ID().getText())
 
         func_type = ctx.getChild(1).getText()
 
+        # Starts flag to check if a function must have a return or not
         if func_type != "void":
             self.has_return = False
         else:
             self.has_return = True
 
     def enterMain(self, ctx):
+        # Change context to main
         self.changeFuncContext("main")
         self.quad_list[0].res = self.quad_counter
 
@@ -67,17 +75,21 @@ class QuadrupleList(CovidListener):
         self.createQuadruple(Quadruple(Operator.ENDPROC,None,None,None))
 
     def exitMain(self, ctx):
+        # Insert final quad
         self.createQuadruple(Quadruple(Operator.END,None,None,None))
 
     def enterArgs(self, ctx):
+        # Apend fake bottom to operator stack and star the param counter
         self.operator_stack.append(Operator.FF)
         self.k = 0
 
     def exitArgs(self, ctx):
+        # Remove fake bottom when solving arguments
         if len(self.operator_stack) > 0:
             if self.operator_stack[-1] == Operator.FF:
                 self.operator_stack.pop()
-
+        
+        # Check if number of parameters coincides with the parameter counter
         if len(self.func_table[self.call_stack[-1]].params) != self.k:
             print(f"[Error: {ctx.start.line}] Number of arguments does not coincide with number of parameters in {self.call_stack[-1]}")
             sys.exit()
@@ -89,6 +101,7 @@ class QuadrupleList(CovidListener):
         local_table = self.func_table[self.curr_scope].var_table
         global_table = self.func_table["global"].var_table
 
+        # Check where the variable belongs (global or local)
         if var_name in local_table:
             table = local_table 
         elif var_name in global_table:
@@ -106,7 +119,7 @@ class QuadrupleList(CovidListener):
         d2_addr = table[var_name].d2
 
         if dims == 1:
-            # Get index
+            # Get index and throw error if the type is not int
             s1, s1_type = self.operand_stack.pop()
 
             if s1_type != Type.INT:
@@ -142,7 +155,7 @@ class QuadrupleList(CovidListener):
             mult_quad = Quadruple(Operator.MULT, mult_res, s1, d2_addr)
             self.createQuadruple(mult_quad)
 
-            # Verify second index is withing bounds
+            # Verify second index is within bounds
             ver_quad = Quadruple(Operator.VER, None, s2, d2_addr)
             self.createQuadruple(ver_quad)
 
@@ -161,24 +174,25 @@ class QuadrupleList(CovidListener):
             self.operand_stack.append((start, data_type))
 
     def exitIdent(self, ctx):
+        # Insert target address in an assignment
         if isinstance(ctx.parentCtx, CovidParser.AssignmentContext):
             self.addOperandToStack(ctx.ID().getText(), ctx.start.line)
             self.operator_stack.append(Operator.ASGN)
 
+        # Append to operant stack if the parent is operand or if parent of parent is a compiler specific func
         if (isinstance(ctx.parentCtx, CovidParser.OperandContext) or
             isinstance(ctx.parentCtx.parentCtx, CovidParser.CovidContext)):
             self.addOperandToStack(ctx.ID().getText(), ctx.start.line)
 
+        # Insert INPUT quad for argument inside input method
         if isinstance(ctx.parentCtx.parentCtx, CovidParser.ReadContext):
             self.operator_stack.append(Operator.INPUT)
             self.addOperandToStack(ctx.ID().getText(), ctx.start.line)
             self.parseReadQuad()
 
     def exitCte(self, ctx):
-        """
-        Checks for the existence of constants and adds them
-        to the operand stack as needed
-        """
+        # Checks for the existence of constants and adds them to operand stack
+
         if ctx.INT_CTE() != None:
             address = self.cte_address_dir.address_table[ctx.getText()]
             self.operand_stack.append((address, Type.INT))
@@ -193,25 +207,25 @@ class QuadrupleList(CovidListener):
             self.operand_stack.append((address, Type.STRING))
 
     def parseAsgnQuad(self, line_num):
-        """
-        Checks the operator stack the asssignment OP
-        Creates the cuadruple for assignment
-        """
+        # Checks the operator stack is empty
         if not self.operator_stack:
             return
 
         if self.operator_stack[-1] == Operator.ASGN:
 
+            # Extract types
             r_operand, r_type = self.operand_stack.pop()
             l_operand, l_type = self.operand_stack.pop()
             operator = self.operator_stack.pop()
 
             result_type = semantic_cube[l_type][r_type][operator]
 
+            # Check that assignment is compatible
             if result_type != None:
                 quad = Quadruple(operator, l_operand, r_operand)
                 self.createQuadruple(quad)
 
+                # Check if address must be released (it is temp)
                 if (r_operand / 1000) == 2:
                     self.func_table[self.curr_scope].address_dir.temp.releaseAddress(r_type, r_operand)
 
@@ -220,20 +234,25 @@ class QuadrupleList(CovidListener):
                 sys.exit()
 
     def parseNotQuad(self, line_num):
+        # Check if operator stack is empty
         if not self.operator_stack:
             return
 
+        # Check if operand had a NOT operator
         if self.operator_stack[-1] == Operator.NOT:
             self.operator_stack.pop()
             operand, data_type = self.operand_stack.pop()
-
+            
+            # Check operand data type (must be int)
             if data_type == Type.INT:
                 result_addr = self.func_table[self.curr_scope].address_dir.addTemp(data_type)
 
+                # Create NOT quad
                 quad = Quadruple(Operator.NOT, result_addr, operand)
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, Type.INT))
 
+                # Check if address must be released (it is temp)
                 if (operand / 1000) == 2:
                     self.func_table[self.curr_scope].address_dir.temp.releaseAddress(data_type, operand)
 
@@ -246,20 +265,25 @@ class QuadrupleList(CovidListener):
             # If empty, void func couldve been used as expr
             return
 
+        # Check if a PRINT quad is pending
         if self.operator_stack[-1] == Operator.PRINT:
             self.operator_stack.pop()
             operand, data_type = self.operand_stack.pop()
-
+            
+            # Create PRINT quad
             quad = Quadruple(Operator.PRINT, None, operand)
             self.createQuadruple(quad)
-
+            
+            # Check if address must be released (it is temp)
             if (operand / 1000) == 2:
                 self.func_table[self.curr_scope].address_dir.temp.releaseAddress(data_type, operand)
 
     def parseReadQuad(self):
+        # Check if operator stack is empty
         if not self.operator_stack:
             return
 
+        # Check if there is an INPUT quad pending
         if self.operator_stack[-1] == Operator.INPUT:
             self.operator_stack.pop()
             operand, _ = self.operand_stack.pop()
@@ -268,10 +292,8 @@ class QuadrupleList(CovidListener):
             self.createQuadruple(quad)
 
     def parseFourTupleQuad(self, operands, line_num):
-        """
-        Checks the operator stack
-        Creates the cuadruples as needed
-        """
+        # Parse most four tuple quads
+        
         if not self.operator_stack:
             return
 
@@ -280,18 +302,20 @@ class QuadrupleList(CovidListener):
             r_operand, r_type = self.operand_stack.pop()
             l_operand, l_type = self.operand_stack.pop()
             operator = self.operator_stack.pop()
-
+            
+            # Verify semantics for both types of operands with a given operator
             result_type = semantic_cube[l_type][r_type][operator]
 
             if result_type != None:
                 result_addr = self.func_table[self.curr_scope].address_dir.addTemp(result_type)
+                # Create respective quad
                 quad = Quadruple(operator, result_addr, l_operand, r_operand)
                 self.createQuadruple(quad)
                 self.operand_stack.append((result_addr, result_type))
 
+                # Check if addresses must be released (if temp)
                 if (r_operand / 1000) == 2:
                     self.func_table[self.curr_scope].address_dir.temp.releaseAddress(r_type, r_operand)
-
                 if (l_operand / 1000) == 2:
                     self.func_table[self.curr_scope].address_dir.temp.releaseAddress(l_type, l_operand)
 
@@ -305,6 +329,7 @@ class QuadrupleList(CovidListener):
         self.jump_stack.append(self.quad_counter - 1)
 
     def enterExpr(self, ctx):
+        # Store jump to evaluate upper limit in a for loop
         if isinstance(ctx.parentCtx, CovidParser.For_loopContext):
             self.jump_stack.append(self.quad_counter) 
 
@@ -348,9 +373,11 @@ class QuadrupleList(CovidListener):
         if ctx.NOT():
             self.operator_stack.append(Operator.NOT)
 
+        # Check if nested operation, adds fake bottom to operator stack
         if ctx.getChild(0).getText() == '(':
             self.operator_stack.append(Operator.FF)
 
+        # Check if fake bottom must be added for a !(expr) operand
         if ctx.getChildCount() > 1:
             if ctx.getChild(1).getText() == '(' and ctx.getChild(0).getText() == '!':
                 self.operator_stack.append(Operator.FF)
@@ -376,8 +403,11 @@ class QuadrupleList(CovidListener):
         self.addOperandToStack(ctx.ID().getText(), ctx.start.line) # push iterator to stack for assignment
 
     def enterCall(self, ctx):
+        # Add call to the call stack
         func_name = ctx.ID().getText()
         self.call_stack.append(func_name)
+
+        # Check if function from call exists
         if func_name in self.func_table:
             quad = Quadruple(Operator.ERA, None, func_name)
             self.createQuadruple(quad)
@@ -386,39 +416,50 @@ class QuadrupleList(CovidListener):
             sys.exit()
 
     def enterIdent_ind(self, ctx):
+        # Add fake bottom to solve array indexing
         self.operator_stack.append(Operator.FF)
 
     def exitIdent_ind(self, ctx):
+        # Pop fake bottom in case of indexing
         if self.operator_stack[-1] == Operator.FF:
             self.operator_stack.pop()
 
     def exitRegresa(self, ctx):
+        # Function does have a return statement
         self.has_return = True
         ret, ret_type = self.operand_stack.pop()
         func_type = self.func_table[self.curr_scope].return_type
         
+        # Check semantic cube with a given return, func type and asignment operation
         if semantic_cube[ret_type][func_type][Operator.ASGN] != None:
             quad = Quadruple(Operator.RETURN, ret, None)
             self.createQuadruple(quad)
          
         else:
+            # User wrote a return statement inside a void func
             if func_type == Type.VOID:
                 print(f'[Error: {ctx.start.line}] Void type functions must not return.')
                 sys.exit()
+            # Return type does not match the function type
             else:
                 print(f'[Error: {ctx.start.line}] Return expression type does not match function type. Must be {func_type.name.lower()}.')
                 sys.exit()
     
     def exitCall(self, ctx):
+        # Remove from call stack, get func name
         self.call_stack.pop()
         func_name = ctx.ID().getText()
+
+        # Generate GOSUB quad
         address = self.func_table[func_name].first_quad
         quad = Quadruple(Operator.GOSUB, None, func_name, address)
         self.createQuadruple(quad)
 
-        # store result from non-void func in temp
+        # Store result from non-void func in temp
         func_type = self.func_table[func_name].return_type
+
         if func_type != Type.VOID:
+            # Get address of function and generate asgn quadruple for non void func
             func_address = self.func_table["global"].var_table[func_name].address
 
             result_addr = self.func_table[self.curr_scope].address_dir.addTemp(func_type)
@@ -426,11 +467,13 @@ class QuadrupleList(CovidListener):
             self.operand_stack.append((result_addr, func_type))
             self.createQuadruple(quad)
         else:
+            # Check if void function was used as part of an expression
             if isinstance(ctx.parentCtx, CovidParser.OperandContext):
-                print(f"[Error: {ctx.start.line}] Void function does not return value for expresion.")
+                print(f"[Error: {ctx.start.line}] Void function does not return value for expression.")
                 sys.exit()
 
     def exitFor_asgn(self, ctx):
+        # Instantiate the iterator in a for loop
         self.operator_stack.append(Operator.ASGN)
         self.parseAsgnQuad(ctx.start.line)
 
@@ -460,18 +503,23 @@ class QuadrupleList(CovidListener):
         if isinstance(ctx.parentCtx, CovidParser.ArgsContext):
             arg, arg_type = self.operand_stack.pop()
             try:
+                # Extract param type from incoming call function
                 _, param_type = self.func_table[self.call_stack[-1]].params[self.k]
             except:
+                # Gave more args than function asked for
                 print(f"[Error: {ctx.start.line}] Number of arguments does not coincide with number of parameters in {self.call_stack[-1]}")
                 sys.exit()
 
+            # Check for semantic considerations usign semantic cube
             result_type = semantic_cube[arg_type][param_type][Operator.ASGN]
 
             if result_type != None:
+                # Generate cuadruple and update param counter
                 quad = Quadruple(Operator.PARAM, f"par{self.k}", arg)
                 self.createQuadruple(quad)
                 self.k += 1
             else:
+                # Argument type does not match param type
                 print(f"[Error: {ctx.start.line}] Parameter type mismatch. Expected {param_type.name.lower()}, got {arg_type.name.lower()}.")
                 sys.exit()
             
@@ -481,12 +529,15 @@ class QuadrupleList(CovidListener):
         self.quad_list[go_to].res = self.quad_counter
 
     def exitWhile_loop(self, ctx):
+        # Extract jump values from jump stack
         go_to_false = self.jump_stack.pop()
         loop_go_to = self.jump_stack.pop()
 
+        # Create looping behaviour for while loop
         quad = Quadruple(Operator.GOTO, loop_go_to, None, None)
         self.createQuadruple(quad)
-
+        
+        # Solve pending gotof from while loop 
         self.quad_list[go_to_false].res = self.quad_counter
 
     def exitFor_loop(self, ctx):
@@ -519,41 +570,51 @@ class QuadrupleList(CovidListener):
         self.parseFourTupleQuad([Operator.SUM, Operator.SUB], ctx.start.line)
 
     def exitOperand(self, ctx):
+        # Check if operator stack is empty
         if not self.operator_stack:
             return
 
+        # Check if there was a NOT operator
         if self.operator_stack[-1] == Operator.NOT:
             self.parseNotQuad(ctx.start.line)
-
+        
+        # if operator stack is empty again
         if not self.operator_stack:
             return
 
+        # Needs to remove a previouly added fake bottom
         if self.operator_stack[-1] == Operator.FF and ctx.getText()[-1] == ")":
             self.operator_stack.pop()
-
+            
+            # Check if operator stack is emtpy one last time (no anxiety here)
             if not self.operator_stack:
                 return
 
             if self.operator_stack[-1] == Operator.NOT:
                 self.parseNotQuad(ctx.start.line)
 
+        # Parse all remaining operators
         self.parseFourTupleQuad([Operator.MULT, Operator.DIV], ctx.start.line)
 
     def createQuadruple(self, quad):
+        # Add quad to list and increment counter
         self.quad_list.append(quad)
         self.quad_counter += 1
 
     def exitLoad_file(self, ctx):
         operand, data_type = self.operand_stack.pop()
         
+        # Check if file path is a string
         if data_type == Type.STRING:
             quad = Quadruple(Operator.FILE, None, operand)
             self.createQuadruple(quad)
         else:
+            # Throw error if is not string
             print(f"[Error: {ctx.start.line}] Argument must be of type string, got {data_type.name.lower()}.")
             sys.exit()
     
     def exitLoad_data(self, ctx):
+        # Extract cols, rows, and data frame
         cols, cols_type = self.operand_stack.pop()
         rows, rows_type = self.operand_stack.pop()
         _, df_type = self.operand_stack.pop()
@@ -615,6 +676,7 @@ class QuadrupleList(CovidListener):
         self.parseCovidSimpleQuad(Operator.MIN, "min", ctx.start.line)
 
     def parseCovidComplexQuad(self, oper, name, gives_result, line_num):
+        # Extract variables to use for quad
         var2, var2_type = self.operand_stack.pop()
         var1, var1_type = self.operand_stack.pop()
         _, df_type = self.operand_stack.pop()
@@ -651,6 +713,7 @@ class QuadrupleList(CovidListener):
         self.parseCovidComplexQuad(Operator.PLOT, "plot", False, ctx.start.line)
 
     def exitHistogram(self, ctx):
+        # Extract variables to use for histogram
         bins, bins_type = self.operand_stack.pop()
         col, col_type = self.operand_stack.pop()
         _, df_type = self.operand_stack.pop()

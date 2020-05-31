@@ -19,15 +19,18 @@ def main(argv):
     if parser.getNumberOfSyntaxErrors() != 0:
         print("Compilation unsuccessful: Syntax Error(s)")
         sys.exit()
-
+    
+    # Create DirFunc using tree walkers
     dir_func = DirFunc()
     walker = ParseTreeWalker()
     walker.walk(dir_func, tree)
 
+    # Generate list of quads
     quad_list = QuadrupleList(dir_func)
     walker = ParseTreeWalker()
     walker.walk(quad_list, tree)
 
+    # Instantiate virtual machine
     virtual_machine = VirtualMachine(
         dir_func.func_table, 
         quad_list.quad_list, 
@@ -36,17 +39,22 @@ def main(argv):
         dir_func.global_address_dir
     )
 
+    # Debug flags
     if len(argv) >= 3:
         if '-q' in argv: # prints quadruples
             print(quad_list)
         if '-d' in argv: # prints dir func
             print(dir_func)
-        if '-c' in argv: # prints constant memory
-            print(dir_func.cte_address_dir)
 
+    # If no errors and successful compilation, run VM
     if parser.getNumberOfSyntaxErrors() == 0:
         print("Successful compilation!")
         virtual_machine.run()
  
 if __name__ == '__main__':
-    main(sys.argv)
+    # Catch Keyboard interrupt
+    try:
+        main(sys.argv)
+    except KeyboardInterrupt:
+        print("\nEnded program due to keyboard interrupt.\n")
+        sys.exit()

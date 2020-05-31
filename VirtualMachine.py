@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import operator
 
 class Cache:
+    """
+    Stores a context for the ctx_stack (includes, current quad position, name and memory spaces)
+    """
     def __init__(self, quad_pos, ctx, local_mem, temp_mem):
         self.quad_pos = quad_pos
         self.ctx = ctx
@@ -20,7 +23,9 @@ class Cache:
         return f'{self.quad_pos} - {self.ctx}'
 
 class VirtualMachine:
-    
+    """
+    Class simulate virtual machine, is in charge of runtime for the language
+    """
     def __init__(self, func_table, quad_list, cte_mem, pointer_mem, global_addr_dir):
         self.func_table = func_table
         self.quad_list = quad_list
@@ -46,6 +51,7 @@ class VirtualMachine:
         print(str(self.resolveMem(quad.op1)).replace('\\n','\n').replace('\\t', '\t'), end="")
 
     def resolveMem(self, address):
+        # Obtains the value by searching in different contexts
         if address >= 4000:
             real_address = self.pointer_mem.getAddress(address)
             return self.resolveMem(real_address)
@@ -59,6 +65,7 @@ class VirtualMachine:
             return self.global_mem.getValue(address)
     
     def writeResult(self, address, result):
+        # Writes a value by searching in different contexts
         if address >= 4000:
             self.pointer_mem.writePointer(address, result)
         elif address >= 2000:
@@ -69,42 +76,51 @@ class VirtualMachine:
             self.global_mem.writeAddress(address, result)
             
     def performArithmetic(self, quad, oper):
+        # Common function for all arithmetic operations
         try:
             result = oper(self.resolveMem(quad.op1), self.resolveMem(quad.op2))
             self.writeResult(quad.res, result)
         except ZeroDivisionError:
+            # Throw error if there is a division by zero
             print("[Error] Division by zero")
             sys.exit()
 
     def performLogical(self, quad, oper):
+        # Common function for all rel and eq operations
         result = 1 if oper(self.resolveMem(quad.op1), self.resolveMem(quad.op2)) else 0
         self.writeResult(quad.res, result)
 
     def performAND(self, quad):
+        # If number is 0 -> false, otherwise true
         l_operator = True if self.resolveMem(quad.op1) != 0 else False
         r_operator = True if self.resolveMem(quad.op2) != 0 else False
         result = 1 if l_operator and r_operator else 0
         self.writeResult(quad.res, result)
         
     def performOR(self, quad):
+        # If number is 0 -> false, otherwise ture
         l_operator = True if self.resolveMem(quad.op1) != 0 else False
         r_operator = True if self.resolveMem(quad.op2) != 0 else False
         result = 1 if l_operator or r_operator else 0
         self.writeResult(quad.res, result)
 
     def performNOT(self, quad):
+        # Inverts a logical int (0 -> 1)
         result = 0 if self.resolveMem(quad.op1) != 0 else 1
         self.writeResult(quad.res, result)
 
     def performREAD(self, quad):
+        # Reads std input and writes the value
         addr = quad.op1
         val = input()
 
+        # Check if address is a pointer that needs solving, before writing to mem
         if addr >= 4000:
             quad = Quadruple(Operator.ASGN, self.pointer_mem.getAddress(addr), val)
             self.performASGN(quad, True)
             return
-            
+        
+        # Gets datatype and casts accordingly
         data_type = (addr % 1000) // 100
         
         if data_type == 0:
@@ -112,6 +128,7 @@ class VirtualMachine:
         elif data_type == 1:
             val = float(val)
 
+        # Writes memory
         if addr >= 2000:
             self.ctx_stack[-1].temp_mem.writeAddress(addr, val)
         elif addr >= 1000:
@@ -120,11 +137,13 @@ class VirtualMachine:
             self.global_mem.writeAddress(addr, val)
 
     def performASGN(self, quad, flag = False):
+        # If pointer, use op1 as value, otherwise it's an address
         if flag:
             value = quad.op1
         else:
             value = self.resolveMem(quad.op1)
-
+        
+        # Solves data type and casts accordingly
         target_addr = quad.res
         data_type_val = (target_addr % 1000) // 100
 
@@ -133,6 +152,7 @@ class VirtualMachine:
         elif data_type_val == 1:
             value = float(value)
 
+        # Writes to memory
         if target_addr >= 4000:
             quad = Quadruple(Operator.ASGN, self.pointer_mem.getAddress(target_addr), quad.op1)
             self.performASGN(quad)
@@ -143,11 +163,13 @@ class VirtualMachine:
         else:
             self.global_mem.writeAddress(target_addr, value)
 
-    def performGOTO(self, quad, cond = None):        
+    def performGOTO(self, quad, cond = None):
+        # Change quad position unconditionally (GOTO)    
         if cond == None:
             self.ctx_stack[-1].quad_pos = quad.res
 
         else:
+            # Only change based on condition
             op = True if self.resolveMem(quad.op1) != 0 else False
             if cond == op:
                 self.ctx_stack[-1].quad_pos = quad.res
@@ -155,6 +177,7 @@ class VirtualMachine:
                 self.ctx_stack[-1].quad_pos += 1
 
     def performINCR(self, quad):
+        # Solves address and updates the increment value, writes value to memory
         addr = quad.op1
         val = self.resolveMem(addr) + 1
         
@@ -164,22 +187,27 @@ class VirtualMachine:
             self.global_mem.writeAddress(addr, val)
 
     def performERA(self, quad):
+        # Instantiate memory of next context and appends it to the call stack
         next_local_mem = Memory(self.func_table[quad.op1].address_dir.local)
         next_temp_mem = Memory(self.func_table[quad.op1].address_dir.temp)
         next_context = quad.op1
         self.call_stack.append(Cache(None, next_context, next_local_mem, next_temp_mem))
 
     def performPARAM(self, quad):
+        # Writes a value for a parameter, given an argument
         from_address = quad.op1
 
+        # Out of bounds (deprecated, but won't touch)
         if from_address >= 5000:
             return
         
+        # Get the type of the argument, param number and param data
         from_type = getDataType(from_address)
 
         param_num = int(quad.res[3:])
         dest_addr, dest_type = self.func_table[self.call_stack[-1].ctx].params[param_num]
 
+        # Get value of parameter
         if from_address >= 4000:
             quad = Quadruple(Operator.PARAM, quad.res, self.pointer_mem.getAddress(from_address))
             self.performPARAM(quad)
@@ -193,6 +221,7 @@ class VirtualMachine:
         else:
             val = self.global_mem.getValue(from_address)
 
+        # Check if it is valid
         result_type = semantic_cube[dest_type][from_type][Operator.ASGN]
 
         if result_type != None:
@@ -215,19 +244,23 @@ class VirtualMachine:
         self.ctx_stack.append(self.call_stack.pop())
 
     def performRETURN(self, quad):
+        # Parche guadalupano
         asgn_quad = Quadruple(Operator.ASGN, self.func_table["global"].var_table[self.ctx_stack[-1].ctx].address, quad.res)
         self.performASGN(asgn_quad)
         self.performENDPROC()
 
     def performENDPROC(self):
+        # Remove current context
         self.ctx_stack.pop()
     
     def performVER(self, quad):
+        # Check if an expr inside array indexing fall within bounds of array
         if self.resolveMem(quad.op2) <= self.resolveMem(quad.op1) or self.resolveMem(quad.op1) < 0:
             print("[Error] Index out of range for array")
             sys.exit()
     
     def performFILE(self, quad):
+        # get file path value, check for the file type and if it exists
         file_path = self.resolveMem(quad.op1)
         if file_path[-4:] != ".csv":
             print("[Error] File should be .csv format")
@@ -239,6 +272,7 @@ class VirtualMachine:
             self.file_path = file_path
     
     def performDATA(self,quad):
+        # Create a dataframe, from file path previously defined
         self.dataframe = pd.read_csv(self.file_path)
 
         self.writeResult(quad.op1, len(self.dataframe.index))
@@ -326,9 +360,8 @@ class VirtualMachine:
     
     def run(self):
         while self.ctx_stack[-1].quad_pos < len(self.quad_list):
+            # Get quad
             quad = self.quad_list[self.ctx_stack[-1].quad_pos]
-            # print(f"Current quad: {self.ctx_stack[-1].quad_pos}")
-            # input("Press enter to continue")
 
             #Linear Quads
             if quad.oper == Operator.SUM:
@@ -428,4 +461,5 @@ class VirtualMachine:
             else:
                 print(f"Quad not caught: {quad.oper}")
 
+            # Go to next quad
             self.ctx_stack[-1].quad_pos += 1

@@ -3,6 +3,10 @@ from Utilities import Type
 
 class AddressDir:
     def __init__(self, context):
+        """
+        Class stores the space needed for variables per type
+        Provides functions to get address for a variable and get the size of a function
+        """
         self.context = context
 
         self.addresses = {
@@ -56,6 +60,7 @@ class TempAddressDir(AddressDir):
     def __init__(self):
         super().__init__(2)
 
+        # List with freed addresses
         self.freed_addresses = {
             Type.INT: [],
             Type.FLOAT: [],
@@ -63,6 +68,7 @@ class TempAddressDir(AddressDir):
             Type.STRING: []
         }
 
+    # If temp address will no longer be used, store it as available
     def releaseAddress(self, data_type, address):
         self.freed_addresses[data_type].append(address)
 
@@ -71,10 +77,15 @@ class TempAddressDir(AddressDir):
         if len(self.freed_addresses[data_type]) > 0:
             return self.freed_addresses[data_type].pop(0)
         
+        # Else return a newly generated one
         return super().getAddress(data_type)
 
 class FuncAddressDir:
     def __init__(self):
+        """
+        Instanciate local address dir and temp dir for a function
+        Provide functionality to get size of the memories as well as addresses of each kind
+        """
         self.local = LocalAddressDir()
         self.temp = TempAddressDir()
 
@@ -95,6 +106,9 @@ class FuncAddressDir:
 
 class CteMemory:
     def __init__(self):
+        """
+        Stores all constant operands and their virtual address
+        """
         self.context = 3
 
         self.addresses = {
@@ -130,6 +144,7 @@ class CteMemory:
         return context_val + data_type_val + pointer_val
 
     def addConstant(self, data_type, value):
+        # get an address for the constant and store it
         address = self.getAddress(data_type, value)
         if address:
             self.address_table[value] = address
@@ -137,6 +152,7 @@ class CteMemory:
         return address
 
     def getConstant(self, address):
+        # Obtain value for constant, using an address
         reduced_addr = (address - 3000) 
 
         if reduced_addr < 100:
@@ -152,21 +168,28 @@ class CteMemory:
         return f'Constants \nINT: {self.addresses[Type.INT]}\nFLOAT: {self.addresses[Type.FLOAT]}\nCHAR: {self.addresses[Type.CHAR]}\nSTRING:{self.addresses[Type.STRING]}'
 
 class PointerMemory:
+    """
+    Stores pointers in a dictionary to solve for addresses
+    """
     pointer_count = 4000
     pointers = {}
 
     def getPointer(self):
+        # Ask for a new pointer address and update count
         ptr = self.pointer_count
         self.pointer_count += 1
         return ptr
 
     def writePointer(self, ptr, address):
+        # Write a value for the pointer
         self.pointers[ptr] = address
 
     def getAddress(self, ptr):
+        # Obtain original address
         return self.pointers[ptr]
 
     def resetPointers(self):
+        # Reset pointer address when switching contexts
         self.pointer_count = 4000
         self.pointers.clear()
     
@@ -175,6 +198,11 @@ class PointerMemory:
 
 class Memory:
     def __init__(self, directory):
+        """
+        Generates a array of the size needed to represent the function memory
+        Creates pointers to access the space of each memory
+        Provides functionality to get values given an address and write in addresses given address and value
+        """
         self.int_pointer = 0
         self.float_pointer = self.int_pointer + directory.addresses[Type.INT]
         self.char_pointer = self.float_pointer + directory.addresses[Type.FLOAT]
@@ -185,11 +213,9 @@ class Memory:
         self.space = [None for x in range(self.size)]
 
     def getValue(self, address):
+        # Obtain the value for a var, given an address
         data_type_val = (address % 1000) // 100
         pointer_val = address % 100
-
-        # print(f"Space: {self.space}")
-        # print(f"Address: {address}")
 
         try:
             # bloque a intentar
@@ -206,6 +232,7 @@ class Memory:
             sys.exit()
         
     def writeAddress(self, address, value):
+        # Write a value for a var, given an address and the value
         data_type_val = (address % 1000) // 100
         pointer_val = address % 100
         
@@ -217,6 +244,3 @@ class Memory:
             self.space[self.char_pointer + pointer_val] = value
         elif data_type_val == 3:
             self.space[self.string_pointer + pointer_val] = value
-
-        # print(f"Wrote {value} in {address}")
-        # print(f"Space: {self.space}")
